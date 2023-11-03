@@ -7,6 +7,12 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.9"
+pydantic = "^2.4.2"
+deta = {extras = ["async"], version = "^1.2.0"}
+anyio = "^4.0.0"
+bcrypt = "^4.0.1"
+Unidecode = "^1.3.7"
+pydantic-settings = "^2.0.3"
 
 [tool.poetry.dev-dependencies]
 
