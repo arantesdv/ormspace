@@ -1,10 +1,8 @@
-import json
-from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+
+from typing import Optional
 
 from pydantic import Field
-from pydantic.fields import FieldInfo
-from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):

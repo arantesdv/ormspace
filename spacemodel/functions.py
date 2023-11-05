@@ -26,7 +26,7 @@ import secrets
 from collections.abc import Sequence
 from dataclasses import fields
 from functools import partial
-from typing import Any, Callable, Coroutine, get_args, get_origin, Iterable, Literal, Optional, overload, TypeVar
+from typing import Any, Callable, get_args, get_origin, Iterable, Literal, Optional, overload, TypeVar
 
 import bcrypt
 from anyio import create_task_group
@@ -54,8 +54,8 @@ def compose(items: list[str]) -> str:
         elif len(items) == 2:
             return join(items, sep=' e ')
         else:
-            data, last = items[:-1], items[-1]
-            return join(data, sep=', ') + ' e ' + last
+            data, reminescent = items[:-1], items[-1]
+            return join(data, sep=', ') + ' e ' + reminescent
     return ''
 
 
