@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+__all__ = ['Database']
+
 import datetime
 from contextvars import copy_context, ContextVar
 from typing import  Optional
@@ -20,10 +22,10 @@ DATA: dict | list | str | int | float | bool
 EXPIRE_IN: int | None
 EXPIRE_AT: int | float | datetime.datetime | None
 QUERY: dict | list[dict] | None
-QUERIES: list[QUERY] | None
+QUERIES: dict[str, QUERY] | None
 
 
-class Detabase:
+class Database:
     def __init__(self, model: type['ModelType']):
         self.model = model
         self.settings = Settings()
@@ -36,8 +38,7 @@ class Detabase:
     
     # context
     @staticmethod
-    async def populate_context(dependants: list[type['ModelType']], lazy: bool = False,
-                               queries: dict[str, QUERY] | None = None) -> None:
+    async def populate_context(dependants: list[type['ModelType']], lazy: bool = False,  queries: QUERIES = None) -> None:
         if not queries:
             async with create_task_group() as tks:
                 for item in dependants:
@@ -47,19 +48,19 @@ class Detabase:
                 for item in dependants:
                     tks.start_soon(item.detabase.set_model_context, lazy, queries.get(item.item_name(), None))
     
-    def get_context_value_by_key(self, key: str) -> Optional[dict]:
-        if value := self.get_context_full_data():
+    def object_from_context(self, key: str) -> Optional[dict]:
+        if value := self.model_context_data():
             if isinstance(value, dict):
                 if data := value.get(key):
                     return data
         return None
     
-    def get_context_instance(self, key: str) -> Optional['ModelType']:
-        if data := self.get_context_value_by_key(key):
+    def instance_from_context(self, key: str) -> Optional['ModelType']:
+        if data := self.object_from_context(key):
             return self.model(**data)
         return None
     
-    def get_context_full_data(self) -> dict[str, dict]:
+    def model_context_data(self) -> dict[str, dict]:
         try:
             return context.get(self.var)
         except BaseException as e:
@@ -68,7 +69,7 @@ class Detabase:
     async def set_model_context(self, *, lazy: bool = False, query: dict | list[dict] | None = None) -> None:
         key = functions.new_getter('key')
         if lazy:
-            if not self.get_context_full_data():
+            if not self.model_context_data():
                 context.run(
                         self.var.set,
                         {key(i): i for i in await self.model.fetch_all(query=query or self.model.FETCH_QUERY)}

@@ -21,7 +21,7 @@ class MetaData:
     model: Optional[type['ModelType']] = None
     
     def __hash__(self):
-        return hash((self.form_field or 0, self.step or 0, functions.join(self.tables), self.item_name, self.config))
+        return hash((self.form_field or 0, self.step or 0, functions.join(self.tables), self.item_name, self.config, self.model.classname()))
     
     def __repr__(self):
         fds = (f for f in dataclasses.fields(self) if getattr(self, f.name))

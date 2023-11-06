@@ -11,10 +11,10 @@ class Settings(BaseSettings):
     port: int = 8080
     collection_key: Optional[str] = Field(None, alias='COLLECTION_KEY')
     project_key: Optional[str] = Field(None, alias='DETA_PROJECT_KEY')
-    space_app_version: str = Field(alias='DETA_SPACE_APP_VERSION')
-    space_app: bool = Field(alias='DETA_SPACE_APP')
-    space_app_hostname: str = Field(alias='DETA_SPACE_APP_HOSTNAME')
-    space_app_micro_name: str = Field(alias='DETA_SPACE_APP_MICRO_NAME')
+    space_app_version: Optional[str] = Field(None, alias='DETA_SPACE_APP_VERSION')
+    space_app: bool = Field(True, alias='DETA_SPACE_APP')
+    space_app_hostname: Optional[str] = Field(None, alias='DETA_SPACE_APP_HOSTNAME')
+    space_app_micro_name: Optional[str] = Field(None, alias='DETA_SPACE_APP_MICRO_NAME')
     
     @property
     def data_key(self):

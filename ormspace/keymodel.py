@@ -10,7 +10,7 @@ from typing_extensions import Self
 
 from . import functions
 from . import keybase as kb
-from .detabase import Detabase
+from .database import Database
 
 
 class KeyModel(BaseModel):
@@ -24,9 +24,10 @@ class KeyModel(BaseModel):
     SINGULAR: ClassVar[str] = None
     PLURAL: ClassVar[str] = None
     TABLE_NAME: ClassVar[str] = None
-    DETABASE: ClassVar[Detabase] = None
+    DATABASE: ClassVar[Database] = None
+    MODEL_GROUPS: ClassVar[list[str]] = None
     Key: ClassVar[Annotated] = None
-    TableKey: ClassVar[Annotated] = None
+    KeyList: ClassVar[Annotated] = None
     
     key: Optional[str] = None
     
