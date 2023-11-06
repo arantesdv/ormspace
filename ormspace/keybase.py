@@ -71,6 +71,3 @@ class TableKey(KeyBase):
 class Key(KeyBase): ...
 
 
-KeyField = Annotated[Key, PlainSerializer(KeyBase.asjson, return_type=str)]
-TableKeyField = Annotated[TableKey, PlainSerializer(KeyBase.asjson, return_type=str)]
-

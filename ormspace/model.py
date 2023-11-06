@@ -150,7 +150,7 @@ ModelMap: ChainMap[str, type[ModelType]] = ChainMap()
 
 
 def models():
-    return functions.filter_uniques(ModelMap.values())
+    return functions.filter_uniques(list(ModelMap.values()))
 
 def modelmap(cls: type[ModelType]):
     @wraps(cls)
@@ -158,8 +158,7 @@ def modelmap(cls: type[ModelType]):
         assert issubclass(cls, Model), 'A subclass of Model is required.'
         assert cls.EXIST_QUERY, 'cadastrar "EXIST_QUERY" na classe "{}"'.format(cls.__name__)
         cls.DETABASE = db.Detabase(cls)
-        cls.Key = Annotated[kb.Key, PlainSerializer(kb.Key.asjson, return_type=str)]
-        cls.TableKey = Annotated[kb.TableKey, PlainSerializer(kb.TableKey.asjson, return_type=str)]
+        cls.Key = Annotated[kb.Key, PlainSerializer(kb.Key.asjson, return_type=str), mt.MetaData(tables=[cls.classname()], item_name=cls.item_name(), model=cls)]
         ModelMap[cls.item_name()]: cls = cls
         return cls
     return wrapper()

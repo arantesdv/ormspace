@@ -17,10 +17,11 @@ class MetaData:
     height: Optional[str] = None
     tables: list[str] = dataclasses.field(default_factory=list)
     item_name: Optional[str] = None
-    col: Optional[str] = 'col-12'
     config: Optional[str] = ''
-    min: Optional[float | int] = None
-    max: Optional[float | int] = None
+    model: Optional[type['ModelType']] = None
+    
+    def __hash__(self):
+        return hash((self.form_field or 0, self.step or 0, functions.join(self.tables), self.item_name, self.config))
     
     def __repr__(self):
         fds = (f for f in dataclasses.fields(self) if getattr(self, f.name))
