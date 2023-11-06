@@ -34,33 +34,33 @@ class KeyModel(BaseModel):
     # detabase engine
     
     @property
-    def table_key(self):
+    def table_key(self) -> str:
         return f'{self.table()}.{self.key}'
     
     @classmethod
     @cache
-    def key_fields(cls):
+    def key_fields(cls) -> list[str]:
         return [k for k, v in cls.model_fields.items() if
                 v.annotation in [kb.Key, Optional[kb.Key], list[kb.Key], dict[str, kb.Key]]]
     
     @classmethod
     @cache
-    def table_key_fields(cls):
+    def table_key_fields(cls) -> list[str]:
         return [k for k, v in cls.model_fields.items() if
                 v.annotation in [kb.TableKey, Optional[kb.TableKey], list[kb.TableKey], dict[str, kb.TableKey]]]
     
     @classmethod
     @cache
-    def reference_fields(cls):
+    def reference_fields(cls) -> tuple[str, ...]:
         return *cls.key_fields(), *cls.table_key_fields()
 
     
     @classmethod
-    def singular(cls):
+    def singular(cls) -> str:
         return cls.SINGULAR or cls.__name__
     
     @classmethod
-    def plural(cls):
+    def plural(cls) -> str:
         return cls.PLURAL or f'{cls.singular()}s'
     
     @classmethod
@@ -68,14 +68,14 @@ class KeyModel(BaseModel):
         return cls.TABLE_NAME or cls.classname()
     
     @classmethod
-    def classname(cls):
+    def classname(cls) -> str:
         return cls.__name__
     
-    def __lt__(self, other):
+    def __lt__(self, other) -> bool:
         return functions.normalize_lower(str(self)) < functions.normalize_lower(str(other))
 
     @classmethod
-    def key_name(cls):
+    def key_name(cls) -> str:
         return f'{cls.item_name()}_key'
 
     @computed_field(repr=False)
@@ -86,7 +86,7 @@ class KeyModel(BaseModel):
         return functions.normalize_lower(str(self))
         
     @classmethod
-    def item_name(cls):
+    def item_name(cls) -> str:
         return functions.cls_name_to_slug(cls.classname())
     
     @field_serializer('key')

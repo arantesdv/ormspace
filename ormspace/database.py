@@ -4,7 +4,7 @@ __all__ = ['Database']
 
 import datetime
 from contextvars import copy_context, ContextVar
-from typing import  Optional
+from typing import Optional
 
 from anyio import create_task_group
 from deta import Deta
@@ -12,7 +12,6 @@ from deta.base import FetchResponse
 
 from . import exception, functions
 from .settings import Settings
-
 
 context = ctx = copy_context()
 
@@ -31,24 +30,30 @@ class Database:
         self.settings = Settings()
         self.deta = Deta(self.settings.data_key)
         self.var = ContextVar(f'{self.model.classname()}Var', default=dict())
-        
+    
     @property
     def current_data(self):
         return context.get(self.var)
     
     # context
     @staticmethod
-    async def populate_context(dependants: list[type['ModelType']], lazy: bool = False,  queries: QUERIES = None) -> None:
+    async def populate_context(dependants: list[type['ModelType']], lazy: bool = False,
+                               queries: QUERIES = None) -> None:
         if not queries:
             async with create_task_group() as tks:
                 for item in dependants:
-                    tks.start_soon(item.detabase.set_model_context, lazy)
+                    tks.start_soon(item.set_model_context, lazy)
         else:
             async with create_task_group() as tks:
                 for item in dependants:
-                    tks.start_soon(item.detabase.set_model_context, lazy, queries.get(item.item_name(), None))
+                    tks.start_soon(item.set_model_context, lazy, queries.get(item.item_name(), None))
     
     def object_from_context(self, key: str) -> Optional[dict]:
+        """
+        Retrieve object context data from key.
+        :param key: the unique identifier of the object
+        :return: json object from database for key
+        """
         if value := self.model_context_data():
             if isinstance(value, dict):
                 if data := value.get(key):
@@ -56,17 +61,33 @@ class Database:
         return None
     
     def instance_from_context(self, key: str) -> Optional['ModelType']:
+        """
+        Retrieve instance using context data from key.
+        :param key: the unique identifier of the object
+        :return: model subclass instance
+        """
         if data := self.object_from_context(key):
             return self.model(**data)
         return None
     
     def model_context_data(self) -> dict[str, dict]:
+        """
+        Retrieve all context data for the model subclass.
+        :return: context value by contextvar as dict
+        :raise: ContextException is raised if not a model contextvar
+        """
         try:
             return context.get(self.var)
         except BaseException as e:
             raise exception.ContextException(f'{e}: {self.model.classname()} não possuir ContextVar')
     
     async def set_model_context(self, *, lazy: bool = False, query: dict | list[dict] | None = None) -> None:
+        """
+        
+        :param lazy: True will return current context data if exists, otherwise will populate model context.
+        :param query: dict or list of dicts modifiing the result
+        :return: None
+        """
         key = functions.new_getter('key')
         if lazy:
             if not self.model_context_data():
@@ -81,17 +102,35 @@ class Database:
             )
     
     @property
-    def data_key(self):
+    def data_key(self) -> str:
+        """
+        The project data key used for Deta Space.
+        :return: str
+        """
         return self.settings.data_key
     
     @property
-    def project_id(self):
+    def project_id(self) -> str:
+        """
+        The project id of data key.
+        :return: str
+        """
         return self.data_key.split('_')[0]
     
-    def async_base(self, host: str | None = None):
+    def async_base(self, host: str | None = None) -> Deta.AsyncBase:
+        """
+        Function to instanciate Deta.AsyncBase instance.
+        :param host: optional host
+        :return: AsyncBase instance.
+        """
         return self.deta.AsyncBase(name=self.model.table(), host=host)
     
-    def sync_base(self, host: str | None = None):
+    def sync_base(self, host: str | None = None) -> Deta.Base:
+        """
+        Function to instanciate Deta.Base instance.
+        :param host: optional host
+        :return: Base instance.
+        """
         return self.deta.Base(self.model.table(), host)
     
     async def fetch_all(self, query: dict | list[dict] | None) -> list[Optional[dict]]:
@@ -177,11 +216,11 @@ class Database:
     
     async def put_many(self, items: list[DATA], *, expire_in: EXPIRE_IN = None,
                        expire_at: EXPIRE_AT = None) -> dict[str, list]:
-        """
+        f"""
         Puts up to 25 items at once with a single call.
         :param items:
-        :param expire_in:
-        :param expire_at:
+        :param expire_in: {EXPIRE_IN}
+        :param expire_at: {EXPIRE_AT}
         :return: Returns a dict with "processed" and "failed" keys containing processed and failed items.
         """
         base = self.async_base()

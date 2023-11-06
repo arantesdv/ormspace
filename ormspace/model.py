@@ -16,30 +16,14 @@ from . import keybase as kb
 from . import metadata as mt
 from . import keymodel as km
 from . import database as db
+from . import containers as ct
 
 
-class ListOfUniques(UserList):
-    def __init__(self, value: list):
-        super().__init__([])
-        if isinstance(value, collections.Sequence):
-            for item in value:
-                self.append(item)
-        
-    def append(self, item):
-        if not item in self.data:
-            self.data.append(item)
-            
-    def extend(self, other):
-        if isinstance(other, Sequence):
-            for item in other:
-                self.data.append(item)
-            
-    
 
 @dataclasses.dataclass
 class ModelGroup:
     name: str
-    models: ListOfUniques[Model] = dataclasses.field(default_factory=ListOfUniques)
+    models: ct.ListOfUniques[Model] = dataclasses.field(default_factory=ct.ListOfUniques)
     
     async def instances(self):
         result = []
@@ -55,7 +39,7 @@ class ModelGroup:
     
 class ModelGroupMap(UserDict[str, ModelGroup]):
     def __init__(self, data: defaultdict):
-        super().__init__({k: ModelGroup(k, ListOfUniques(v)) for k, v in data.items()})
+        super().__init__({k: ModelGroup(k, ct.ListOfUniques(v)) for k, v in data.items()})
 
 
 class Model(km.KeyModel):
@@ -207,8 +191,10 @@ def model_groups(name: str | None = None):
         return ModelGroupMap(result).get(name)
     return ModelGroupMap(result)
 
-def models():
+
+def models() -> list[type[ModelType]]:
     return functions.filter_uniques(list(ModelMap.values()))
+
 
 def modelmap(cls: type[ModelType]):
     @wraps(cls)
