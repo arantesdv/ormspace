@@ -12,22 +12,32 @@ from pydantic import PlainSerializer
 from typing_extensions import Self
 
 from . import exception, functions
-from . import keybase as kb
+from . import key_bases as kb
 from . import metadata as mt
-from . import keymodel as km
+from . import key_model as km
 from . import database as db
 from . import containers as ct
-
+from . import bases as bs
 
 
 @dataclasses.dataclass
 class ModelGroup:
+    """This is a derivative and aglomerative class to join Models as a unique namespace of 'Virtual Model'. As an example,
+    Profile ModelGroup instance with models Doctor, Patient.
+    :param name: name of the group
+    :type name: str
+    :param models: list of Model classes
+    :type models: list[type[Model]]
+    ...
+    :return: ModelGroup instance
+    :rtype: ModelGroup
+    """
     name: str
     models: ct.ListOfUniques[Model] = dataclasses.field(default_factory=ct.ListOfUniques)
     
     async def instances(self):
         result = []
-        async def extend(_model: ModelType):
+        async def extend(_model: bs.ModelType):
             result.extend(await _model.sorted_instances_list(lazy=True))
 
         async with create_task_group() as tks:
@@ -42,7 +52,7 @@ class ModelGroupMap(UserDict[str, ModelGroup]):
         super().__init__({k: ModelGroup(k, ct.ListOfUniques(v)) for k, v in data.items()})
 
 
-class Model(km.KeyModel):
+class Model(km.KeyModel, bs.AbstractModel):
     
     @classmethod
     async def set_model_context(cls, lazy: bool = False, query: dict | list[dict] | None = None) -> None:
@@ -93,7 +103,7 @@ class Model(km.KeyModel):
         
         result = list()
         
-        def recursive(model: type[ModelType]):
+        def recursive(model: type[bs.ModelType]):
             result.append(model)
             if dependents := model.primary_dependents():
                 for item in dependents:
@@ -170,9 +180,9 @@ class Model(km.KeyModel):
                                               f'que não foi salvo para evitar conflitos. As possíveis chaves são {keys}.')
 
 
-ModelType = TypeVar('ModelType', bound=Model)
+# ModelType = TypeVar('ModelType', bound=Model)
 
-ModelMap: ChainMap[str, type[ModelType]] = ChainMap()
+ModelMap: ChainMap[str, type[bs.ModelType]] = ChainMap()
 
 @overload
 def model_groups() -> ModelGroupMap:...
@@ -192,11 +202,11 @@ def model_groups(name: str | None = None):
     return ModelGroupMap(result)
 
 
-def models() -> list[type[ModelType]]:
+def models() -> list[type[bs.ModelType]]:
     return functions.filter_uniques(list(ModelMap.values()))
 
 
-def modelmap(cls: type[ModelType]):
+def modelmap(cls: type[bs.ModelType]):
     @wraps(cls)
     def wrapper():
         assert issubclass(cls, Model), 'A subclass of Model is required.'
@@ -208,7 +218,7 @@ def modelmap(cls: type[ModelType]):
         return cls
     return wrapper()
 
-def getmodel(value: str) -> type[ModelType]:
+def getmodel(value: str) -> type[bs.ModelType]:
     if isinstance(value, str):
         if value[0].isupper():
             return ModelMap.get(functions.cls_name_to_slug(value), None)

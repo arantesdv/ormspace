@@ -9,11 +9,16 @@ from pydantic import computed_field, ConfigDict, BaseModel, field_serializer
 from typing_extensions import Self
 
 from . import functions
-from . import keybase as kb
+from . import key_bases as kb
 from .database import Database
+from .alias import *
 
 
 class KeyModel(BaseModel):
+    """This is a base class of every object model in deta space database.
+    :param key: the key parameter of the instance
+    :type key: str | None
+    """
     # model config
     model_config = ConfigDict(extra='allow', str_strip_whitespace=True, arbitrary_types_allowed=True)
     # classvars
@@ -99,7 +104,7 @@ class KeyModel(BaseModel):
     def asjson(self):
         return json.loads(self.model_dump_json())
     
-    def model_fields_asjson(self):
+    def model_fields_asjson(self) -> JSONDICT:
         data = self.asjson()
         result = {}
         keys = [*self.model_fields.keys(), *self.model_computed_fields.keys()]

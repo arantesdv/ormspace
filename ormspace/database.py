@@ -11,23 +11,19 @@ from deta import Deta
 from deta.base import FetchResponse
 
 from . import exception, functions
-from .settings import Settings
+from .space_settings import SpaceSettings
+from .bases import ModelType
+from .alias import *
+
 
 context = ctx = copy_context()
 
-TABLE: str
-KEY: str | None
-DATA: dict | list | str | int | float | bool
-EXPIRE_IN: int | None
-EXPIRE_AT: int | float | datetime.datetime | None
-QUERY: dict | list[dict] | None
-QUERIES: dict[str, QUERY] | None
 
 
 class Database:
-    def __init__(self, model: type['ModelType']):
+    def __init__(self, model: type[ModelType]):
         self.model = model
-        self.settings = Settings()
+        self.settings = SpaceSettings()
         self.deta = Deta(self.settings.data_key)
         self.var = ContextVar(f'{self.model.classname()}Var', default=dict())
     
@@ -37,12 +33,12 @@ class Database:
     
     # context
     @staticmethod
-    async def populate_context(dependants: list[type['ModelType']], lazy: bool = False,
+    async def populate_context(dependants: list[type[ModelType]], lazy: bool = False,
                                queries: QUERIES = None) -> None:
         if not queries:
             async with create_task_group() as tks:
                 for item in dependants:
-                    tks.start_soon(item.set_model_context, lazy)
+                    tks.start_soon(item.set_model_context, lazy, item.FETCH_QUERY)
         else:
             async with create_task_group() as tks:
                 for item in dependants:
@@ -60,7 +56,7 @@ class Database:
                     return data
         return None
     
-    def instance_from_context(self, key: str) -> Optional['ModelType']:
+    def instance_from_context(self, key: str) -> Optional[ModelType]:
         """
         Retrieve instance using context data from key.
         :param key: the unique identifier of the object

@@ -7,6 +7,7 @@ from pydantic.fields import FieldInfo
 from typing_extensions import Self
 
 from . import functions
+from .bases import ModelType
 
 
 
@@ -18,7 +19,7 @@ class MetaData:
     tables: list[str] = dataclasses.field(default_factory=list)
     item_name: Optional[str] = None
     config: Optional[str] = ''
-    model: Optional[type['ModelType']] = None
+    model: Optional[type[ModelType]] = None
     
     def __hash__(self):
         return hash((self.form_field or 0, self.step or 0, functions.join(self.tables), self.item_name, self.config, self.model.classname()))

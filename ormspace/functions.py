@@ -79,7 +79,6 @@ def find_numbers(string: str) -> list[str]:
 def find_digits(string: str) -> list[str]:
     return re.findall(r'\d', string)
 
-
 def remove_extra_whitespaces(string: str) -> str:
     return re.sub(r'(\s+)', ' ', string).strip()
 
