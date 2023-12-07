@@ -15,3 +15,7 @@ class ExistException(BaseException):
 
 class SaveNewException(BaseException):
     pass
+
+
+class SaveException(BaseException):
+    pass

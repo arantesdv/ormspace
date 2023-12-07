@@ -11,7 +11,7 @@ from deta import Deta
 from deta.base import FetchResponse
 
 from . import exception, functions
-from .space_settings import SpaceSettings
+from .settings import SpaceSettings
 from .bases import ModelType
 from .alias import *
 
@@ -22,10 +22,13 @@ context = ctx = copy_context()
 
 class Database:
     def __init__(self, model: type[ModelType]):
-        self.model = model
-        self.settings = SpaceSettings()
-        self.deta = Deta(self.settings.data_key)
-        self.var = ContextVar(f'{self.model.classname()}Var', default=dict())
+        try:
+            self.model = model
+            self.settings = SpaceSettings()
+            self.deta = Deta(self.settings.data_key)
+            self.var = ContextVar(f'{self.model.classname()}Var', default=dict())
+        except BaseException as e:
+            raise exception.DatabaseException(e)
     
     @property
     def current_data(self):
@@ -35,6 +38,13 @@ class Database:
     @staticmethod
     async def populate_context(dependants: list[type[ModelType]], lazy: bool = False,
                                queries: QUERIES = None) -> None:
+        """
+        Populate context with data from database, as a dictionary of key and object data.
+        :param dependants: list of dependants models.
+        :param lazy: if True will try first cached model data in context.
+        :param queries: a dict of querie for each model
+        :return: None
+        """
         if not queries:
             async with create_task_group() as tks:
                 for item in dependants:
@@ -79,7 +89,7 @@ class Database:
     
     async def set_model_context(self, *, lazy: bool = False, query: dict | list[dict] | None = None) -> None:
         """
-        
+        Set context data for the model of the database instance (self.model).
         :param lazy: True will return current context data if exists, otherwise will populate model context.
         :param query: dict or list of dicts modifiing the result
         :return: None
@@ -130,6 +140,11 @@ class Database:
         return self.deta.Base(self.model.table(), host)
     
     async def fetch_all(self, query: dict | list[dict] | None) -> list[Optional[dict]]:
+        """
+        Fetch all database data.
+        :param query: a query dict of a list of query dicts
+        :return: a list of object data, each one as a dict with at least the key stored
+        """
         base = self.async_base()
         try:
             result = await base.fetch(query=query)
@@ -142,6 +157,11 @@ class Database:
             await base.close()
     
     async def fetch_one(self, key: str) -> Optional[dict]:
+        """
+        Return object data from database instance model by key.
+        :param key:
+        :return: the object data or None
+        """
         base = self.async_base()
         try:
             return await base.get(key)
@@ -156,6 +176,11 @@ class Database:
             await base.close()
     
     async def create_key(self, key: str = None) -> Optional[str]:
+        """
+        Create a new key for model table at database.
+        :param key:
+        :return:
+        """
         base = self.async_base()
         try:
             result = await base.insert(data=dict(), key=key)
@@ -164,15 +189,27 @@ class Database:
         finally:
             await base.close()
     
-    async def save(self, data: dict):
+    async def save(self, data: dict) -> Optional[dict]:
+        """
+        Store data at table model. If key provided, replace stored object if already exist.
+        :param data: dictionary with data to be stored
+        :return: a dict object data stored with key, or None
+        """
         base = self.async_base()
         key = data.pop('key', None)
         try:
             return await base.put(data=data, key=key)
+        except BaseException as e:
+            raise exception.SaveException(e)
         finally:
             await base.close()
     
     async def exist(self, query: dict[str, str] | list[dict[str, str]]) -> Optional[dict]:
+        """
+        Check if exist an object based in a query.
+        :param query: query as a dict or list of dicts
+        :return: the object if already exist, otherwise None
+        """
         result = await self.fetch(query=query)
         if result.count == 1:
             return result.items[0]
@@ -181,7 +218,12 @@ class Database:
         else:
             raise exception.ExistException('a pesquisa "exist" retornou mais de uma possibilidade')
     
-    async def delete(self, key: str):
+    async def delete(self, key: str) -> None:
+        """
+        Delete stored object by key.
+        :param key: the object key as string
+        :return: None
+        """
         base = self.async_base()
         try:
             await base.delete(key)

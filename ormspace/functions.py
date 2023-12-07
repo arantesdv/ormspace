@@ -58,23 +58,19 @@ def compose(items: list[str]) -> str:
             return join(data, sep=', ') + ' e ' + reminescent
     return ''
 
-
 def years(end: datetime.date, start: datetime.date) -> float:
     days = (end - start).days
     subtract = calendar.leapdays(start.year, end.year)
     return ((days - subtract)/365).__round__(1)
 
-
 def date_from_age(age: float, bdate: datetime.date) -> datetime.date:
     around = bdate + datetime.timedelta(days=age * 365)
     return around + datetime.timedelta(days=calendar.leapdays(bdate.year, around.year))
-
 
 def find_numbers(string: str) -> list[str]:
     if mt:= re.findall(r'(\d+[.,]\d+|\d+)', string):
         return [i for i in mt if i]
     return []
-
 
 def find_digits(string: str) -> list[str]:
     return re.findall(r'\d', string)
@@ -82,18 +78,14 @@ def find_digits(string: str) -> list[str]:
 def remove_extra_whitespaces(string: str) -> str:
     return re.sub(r'(\s+)', ' ', string).strip()
 
-
 def normalize(string: str) -> str:
     return unidecode(remove_extra_whitespaces(string))
-
 
 def normalize_lower(string: str) -> str:
     return normalize(string).lower()
 
-
 def slug_to_cls_name(slug: str):
     return ''.join([s.title() for s in slug.split('_')])
-
 
 def cls_name_to_slug(_clsname: str):
     parts = re.findall(r'[a-z][A-Z]|[A-Z][A-Z][a-z]', _clsname)
@@ -101,7 +93,6 @@ def cls_name_to_slug(_clsname: str):
         for i in parts:
             _clsname = _clsname.replace(i, f'{i[0]}_{i[1:]}')
     return _clsname.lower()
-
 
 def write_kwargs(data: dict, sep: str = ', ', junction: Literal['=', ':', '->', '=>'] = "=", underscore_key: bool = True, raw_value: bool = False):
     
@@ -113,18 +104,14 @@ def write_kwargs(data: dict, sep: str = ', ', junction: Literal['=', ':', '->', 
         
     return sep.join([f'{format_key(k)}{junction}{format_value(v)}' for k, v in data.items() if v])
 
-
 def write_args(args, sep: str = ' '):
     return sep.join([str(i) for i in args if i is not None])
-
 
 def remove_whitespaces(string: str) -> str:
     return re.sub(r'(\s+)', '', string)
 
-
 def only_of_type(tp: type[T] | tuple[type[T], ...], iterable: Iterable[Any, T]) -> list[T]:
     return [*[i for i in iterable if isinstance(i, tp)], None]
-
 
 def parse_number(string: str):
     try:
@@ -134,14 +121,11 @@ def parse_number(string: str):
     except TypeError:
         return string
 
-
 @overload
 def join(data: dict, sep: str, junction: str, boundary: str, underscored: bool, prefix: str) -> str:...
 
-
 @overload
 def join(data: Sequence, sep: str) -> str:...
-
 
 def join(data: list | dict, sep: str = None, junction: str = "=", boundary: str ='"', underscored: bool = False, prefix: str = None) -> str:
     if isinstance(data, dict):
@@ -153,7 +137,6 @@ def join(data: list | dict, sep: str = None, junction: str = "=", boundary: str 
     else:
         return (sep or ' ').join([str(i) for i in data if i])
 
-
 def primary_type(annotation: Any):
     if origin:= get_origin(annotation):
         if isinstance(origin, type):
@@ -163,26 +146,21 @@ def primary_type(annotation: Any):
     if isinstance(annotation, type):
         return annotation
 
-
 def filter_by_type(iterable: Iterable[T, Any], tp: tuple[type] | type):
     return [i for i in iterable if isinstance(i, tp)]
-
 
 def first(sequence: Sequence):
     if len(sequence) > 1:
         return sequence[0]
     return None
 
-
 def last(sequence: Sequence):
     if len(sequence) > 1:
         return sequence[-1]
     return None
 
-
 def random_id(size: int = 8):
     return secrets.token_hex(size)
-
 
 def parse_local_date_to_date(string: str) -> Optional[datetime.date]:
     values = list()
@@ -205,19 +183,15 @@ def parse_local_date_to_date(string: str) -> Optional[datetime.date]:
         return datetime.date(*[int(i) for i in values])
     
     return None
-    
 
 def now():
     return datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=-3)))
 
-
 def now_iso():
     return now().isoformat()[:16]
 
-
 def today():
     return now().date()
-
 
 def filter_uniques(data: Sequence) -> list:
     result = list()
@@ -225,7 +199,6 @@ def filter_uniques(data: Sequence) -> list:
         if not item in result:
             result.append(item)
     return result
-
 
 def filter_not_none(data: Sequence) -> list:
     return [i for i in data if i not in [None, '', list(), dict(), set()]]
@@ -248,14 +221,11 @@ def getter(obj: Any, name: str):
     finally:
         return value
 
-
 def new_getter(name: str):
     """Create a new getter for name"""
     return partial(getter, name=name)
 
-
 get_key = new_getter('key')
-
 
 def paginate(items: list, size: int = 25, result: list[list] | None = None) -> list[list]:
     result = result or list()
@@ -292,7 +262,6 @@ def string_to_number(value: str) -> int | float:
         return float(value).__round__(2)
     return int(float(value))
 
-
 def string_to_list(v: list[str] | str):
     if v in ['', None]:
         return []
@@ -314,7 +283,6 @@ def str_to_bytes(value):
 
 def hash_password(value):
     return bcrypt.hashpw(str_to_bytes(value), bcrypt.gensalt())
-
 
 def title_caps(string: str) -> str:
     words = re.findall(r"\w+[-\']\w+|\w+", string)

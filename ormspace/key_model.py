@@ -9,7 +9,7 @@ from pydantic import computed_field, ConfigDict, BaseModel, field_serializer
 from typing_extensions import Self
 
 from . import functions
-from . import key_bases as kb
+from . import keys as kb
 from .database import Database
 from .alias import *
 

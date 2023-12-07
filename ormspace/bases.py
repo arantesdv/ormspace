@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from functools import cache
-from typing import Optional, TypeVar, Union
+from typing import Optional, TypeVar
 
-import deta
 from pydantic import computed_field, field_serializer
 from pydantic.fields import FieldInfo
 from typing_extensions import Self

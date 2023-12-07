@@ -12,7 +12,7 @@ from pydantic import PlainSerializer
 from typing_extensions import Self
 
 from . import exception, functions
-from . import key_bases as kb
+from . import keys as kb
 from . import metadata as mt
 from . import key_model as km
 from . import database as db
