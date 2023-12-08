@@ -77,7 +77,7 @@ class AbstractModel(ABC):
     
     @classmethod
     @abstractmethod
-    async def set_model_context(cls, lazy: bool = False, query: QUERY = None) -> None:...
+    async def update_model_context_data(cls, lazy: bool = False, query: QUERY = None) -> None:...
     
     @classmethod
     @abstractmethod
@@ -151,7 +151,7 @@ class AbstractModel(ABC):
     
     @classmethod
     @abstractmethod
-    async def set_dependents_context(cls, lazy: bool = False, queries: QUERIES = None) -> None:...
+    async def update_dependants_context_data(cls, lazy: bool = False, queries: QUERIES = None) -> None:...
     
     @classmethod
     @abstractmethod

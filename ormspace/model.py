@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import collections
 import dataclasses
-from collections.abc import Sequence
 from functools import cache, wraps
-from typing import Annotated, Optional, overload, TypeVar
-from collections import ChainMap, defaultdict, UserDict, UserList
+from typing import Annotated, Optional, overload
+from collections import ChainMap, defaultdict, UserDict
 
 from anyio import create_task_group
+from deta.base import FetchResponse
 from pydantic import PlainSerializer
 from typing_extensions import Self
 
@@ -55,24 +54,24 @@ class ModelGroupMap(UserDict[str, ModelGroup]):
 class Model(km.KeyModel, bs.AbstractModel):
     
     @classmethod
-    async def set_model_context(cls, lazy: bool = False, query: dict | list[dict] | None = None) -> None:
-        return await cls.DATABASE.set_model_context(lazy=lazy, query=query)
+    async def update_model_context_data(cls, lazy: bool = False, query: dict | list[dict] | None = None) -> None:
+        return await cls.DATABASE.set_context_data(lazy=lazy, query=query)
     
     @classmethod
     def current_model_context(cls) -> dict[str, dict]:
-        return cls.DATABASE.model_context_data()
+        return cls.DATABASE.context_data()
     
     @classmethod
     def get_context_value_by_key(cls, key: str):
-        return cls.DATABASE.object_from_context(key=key)
+        return cls.DATABASE.object_data(key=key)
     
     @classmethod
     def get_context_instance(cls, key: str) -> Self:
-        return cls.DATABASE.instance_from_context(key=key)
+        return cls.DATABASE.model_instance(key=key)
     
     @classmethod
     async def instances_list(cls, *, lazy: bool = True, query: dict | list[dict] | None = None):
-        await cls.set_model_context(lazy=lazy, query=query)
+        await cls.update_model_context_data(lazy=lazy, query=query)
         return [cls(**i) for i in cls.current_model_context().values()]
     
     @classmethod
@@ -140,7 +139,7 @@ class Model(km.KeyModel, bs.AbstractModel):
         return await cls.DATABASE.fetch_one(key)
     
     @classmethod
-    async def fetch(cls, query: dict | list[dict] | None = None, last: str | None = None):
+    async def fetch(cls, query: dict | list[dict] | None = None, last: str | None = None) -> FetchResponse:
         return await cls.DATABASE.fetch(query=query, last=last)
     
     @classmethod
@@ -160,25 +159,21 @@ class Model(km.KeyModel, bs.AbstractModel):
         return query
     
     @classmethod
-    async def set_dependents_context(cls, lazy: bool = False, queries: dict[str, db.QUERY] = None):
-        await cls.DATABASE.populate_context(cls.dependents(), lazy=lazy, queries=queries)
+    async def update_dependants_context_data(cls, lazy: bool = False, queries: dict[str, db.QUERY] = None):
+        await cls.DATABASE.update_dependants_context_data(cls.dependents(), lazy=lazy, queries=queries)
     
     @classmethod
     async def put_many(cls, items: list[Self]):
         return await cls.DATABASE.put_many(items=[item.model_fields_asjson() for item in items])
     
     async def exist(self) -> Optional[dict]:
-        result = await self.fetch(self.exist_query())
-        if result.count == 1:
-            raise exception.ExistException(f'Este objeto já existe com a chave {result.items[0]["key"]}')
-            # return result.items[0]
-        elif result.count == 0:
-            return None
-        else:
-            keys = [i.get('key') for i in result.items]
-            raise exception.DatabaseException(f'Vários objetos no banco de dados podem corresponder a este objeto, '
-                                              f'que não foi salvo para evitar conflitos. As possíveis chaves são {keys}.')
-
+        result = await self.DATABASE.exist(self.exist_query())
+        if result:
+            if isinstance(result, dict):
+                return result
+            elif isinstance(result, list):
+                raise exception.ExistException(f'Inconsistência no banco de dados de {self.classname()} com a EXIST_QUERY {self.EXIST_QUERY}')
+        return None
 
 # ModelType = TypeVar('ModelType', bound=Model)
 

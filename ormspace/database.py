@@ -2,7 +2,7 @@ from __future__ import annotations
 
 __all__ = ['Database']
 
-import datetime
+
 from contextvars import copy_context, ContextVar
 from typing import Optional
 
@@ -21,22 +21,22 @@ context = ctx = copy_context()
 
 
 class Database:
-    def __init__(self, model: type[ModelType]):
+    def __init__(self, model: type[ModelType], settings: SpaceSettings = None):
         try:
             self.model = model
-            self.settings = SpaceSettings()
-            self.deta = Deta(self.settings.data_key)
-            self.var = ContextVar(f'{self.model.classname()}Var', default=dict())
+            self.settings = settings or SpaceSettings()
+            self.deta = Deta(self.deta_data_key)
+            self.contextvar = ContextVar(f'{self.model.classname()}Var', default=dict())
         except BaseException as e:
             raise exception.DatabaseException(e)
-    
+        
     @property
-    def current_data(self):
-        return context.get(self.var)
-    
+    def deta_data_key(self):
+        return self.settings.data_key
+
     # context
     @staticmethod
-    async def populate_context(dependants: list[type[ModelType]], lazy: bool = False,
+    async def update_dependants_context_data(dependants: list[type[ModelType]], lazy: bool = False,
                                queries: QUERIES = None) -> None:
         """
         Populate context with data from database, as a dictionary of key and object data.
@@ -48,46 +48,46 @@ class Database:
         if not queries:
             async with create_task_group() as tks:
                 for item in dependants:
-                    tks.start_soon(item.set_model_context, lazy, item.FETCH_QUERY)
+                    tks.start_soon(item.update_model_context_data, lazy, item.FETCH_QUERY)
         else:
             async with create_task_group() as tks:
                 for item in dependants:
-                    tks.start_soon(item.set_model_context, lazy, queries.get(item.item_name(), None))
+                    tks.start_soon(item.update_model_context_data, lazy, queries.get(item.item_name(), None))
     
-    def object_from_context(self, key: str) -> Optional[dict]:
+    def object_data(self, key: str) -> Optional[dict]:
         """
         Retrieve object context data from key.
         :param key: the unique identifier of the object
         :return: json object from database for key
         """
-        if value := self.model_context_data():
+        if value := self.context_data():
             if isinstance(value, dict):
                 if data := value.get(key):
                     return data
         return None
     
-    def instance_from_context(self, key: str) -> Optional[ModelType]:
+    def model_instance(self, key: str) -> Optional[ModelType]:
         """
         Retrieve instance using context data from key.
         :param key: the unique identifier of the object
         :return: model subclass instance
         """
-        if data := self.object_from_context(key):
+        if data := self.object_data(key):
             return self.model(**data)
         return None
     
-    def model_context_data(self) -> dict[str, dict]:
+    def context_data(self) -> dict[str, dict]:
         """
         Retrieve all context data for the model subclass.
         :return: context value by contextvar as dict
         :raise: ContextException is raised if not a model contextvar
         """
         try:
-            return context.get(self.var)
+            return context.get(self.contextvar)
         except BaseException as e:
             raise exception.ContextException(f'{e}: {self.model.classname()} não possuir ContextVar')
     
-    async def set_model_context(self, *, lazy: bool = False, query: dict | list[dict] | None = None) -> None:
+    async def set_context_data(self, *, lazy: bool = False, query: dict | list[dict] | None = None) -> None:
         """
         Set context data for the model of the database instance (self.model).
         :param lazy: True will return current context data if exists, otherwise will populate model context.
@@ -96,14 +96,14 @@ class Database:
         """
         key = functions.new_getter('key')
         if lazy:
-            if not self.model_context_data():
+            if not self.context_data():
                 context.run(
-                        self.var.set,
+                        self.contextvar.set,
                         {key(i): i for i in await self.model.fetch_all(query=query or self.model.FETCH_QUERY)}
                 )
         else:
             context.run(
-                    self.var.set,
+                    self.contextvar.set,
                     {key(i): i for i in await self.model.fetch_all(query=query or self.model.FETCH_QUERY)}
             )
     
@@ -186,6 +186,7 @@ class Database:
             result = await base.insert(data=dict(), key=key)
             if result:
                 return result.get('key')
+            return None
         finally:
             await base.close()
     
@@ -216,7 +217,7 @@ class Database:
         elif result.count == 0:
             return None
         else:
-            raise exception.ExistException('a pesquisa "exist" retornou mais de uma possibilidade')
+            return result.items
     
     async def delete(self, key: str) -> None:
         """

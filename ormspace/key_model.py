@@ -59,7 +59,6 @@ class KeyModel(BaseModel):
     def reference_fields(cls) -> tuple[str, ...]:
         return *cls.key_fields(), *cls.table_key_fields()
 
-    
     @classmethod
     def singular(cls) -> str:
         return cls.SINGULAR or cls.__name__
@@ -100,7 +99,6 @@ class KeyModel(BaseModel):
             return v
         return None
     
- 
     def asjson(self):
         return json.loads(self.model_dump_json())
     
