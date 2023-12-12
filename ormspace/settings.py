@@ -1,4 +1,4 @@
-
+import os
 from typing import Optional
 
 from pydantic import Field
@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class SpaceSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_nested_delimiter='__', env_file='.env', env_file_encoding='utf-8', extra='ignore')
+    model_config = SettingsConfigDict(env_nested_delimiter='__', env_file='.env', env_file_encoding='utf-8', extra='allow')
     
     port: int = 8080
     collection_key: Optional[str] = Field(None, alias='COLLECTION_KEY')
@@ -19,6 +19,10 @@ class SpaceSettings(BaseSettings):
     @property
     def data_key(self):
         return self.collection_key or self.project_key
+    
+    @staticmethod
+    def get(key: str):
+        return os.getenv(key=key, default=None)
     
     
     

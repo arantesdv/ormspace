@@ -21,17 +21,17 @@ class AbstractModel(ABC):
     @classmethod
     @cache
     @abstractmethod
-    def key_fields(cls) -> list[str]:...
+    def key_field_names(cls) -> list[str]:...
     
     @classmethod
     @cache
     @abstractmethod
-    def table_key_fields(cls) -> list[str]:...
+    def tablekey_field_names(cls) -> list[str]:...
     
     @classmethod
     @cache
     @abstractmethod
-    def reference_fields(cls) -> tuple[str, ...]:...
+    def dependencies_field_names(cls) -> tuple[str, ...]:...
     
     @classmethod
     @abstractmethod

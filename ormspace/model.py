@@ -82,7 +82,7 @@ class Model(km.KeyModel, bs.AbstractModel):
     @cache
     def key_field_models(cls):
         result = []
-        for item in cls.key_fields():
+        for item in cls.key_field_names():
             if meta:= mt.MetaData.merge(mt.MetaData.field_info(cls, item)):
                 result.extend([getmodel(i) for i in meta.tables])
         return functions.filter_uniques(result)
@@ -91,7 +91,7 @@ class Model(km.KeyModel, bs.AbstractModel):
     @cache
     def table_key_field_models(cls):
         result = []
-        for item in cls.table_key_fields():
+        for item in cls.tablekey_field_names():
             if meta:= mt.MetaData.merge(mt.MetaData.field_info(cls, item)):
                 result.extend([getmodel(i) for i in meta.tables])
         return functions.filter_uniques(functions.filter_not_none(result))
@@ -115,14 +115,14 @@ class Model(km.KeyModel, bs.AbstractModel):
     
     @classmethod
     @cache
-    def primary_dependents(cls):
-        return functions.filter_not_none(
-            functions.filter_uniques([*cls.key_field_models(), *cls.table_key_field_models()]))
+    def primary_dependents(cls) -> tuple[type[bs.ModelType]]:
+        return tuple(functions.filter_not_none(
+            functions.filter_uniques([*cls.key_field_models(), *cls.table_key_field_models()])))
     
     @classmethod
     @cache
     def dependent_fields(cls):
-        return functions.filter_not_none([*cls.key_fields(), *cls.table_key_fields()])
+        return functions.filter_not_none([*cls.key_field_names(), *cls.tablekey_field_names()])
     
     @classmethod
     @cache
@@ -174,8 +174,28 @@ class Model(km.KeyModel, bs.AbstractModel):
             elif isinstance(result, list):
                 raise exception.ExistException(f'Inconsistência no banco de dados de {self.classname()} com a EXIST_QUERY {self.EXIST_QUERY}')
         return None
+    
+    def instance_references(self):
+        result = {}
+        data = self.asjson()
+        references = self.dependencies_field_names()
+        for k, v in data.items():
+            if k in references:
+                result[k] = v or ''
+        return result
+    
+    async def save(self):
+        return await self.DATABASE.save(self.asjson())
+    
+    async def delete(self):
+        return await self.DATABASE.delete(key=self.key)
+    
+    async def save_new(self):
+        exist = await self.exist()
+        if not exist:
+            return await self.save()
+        
 
-# ModelType = TypeVar('ModelType', bound=Model)
 
 ModelMap: ChainMap[str, type[bs.ModelType]] = ChainMap()
 

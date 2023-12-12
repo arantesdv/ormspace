@@ -44,20 +44,20 @@ class KeyModel(BaseModel):
     
     @classmethod
     @cache
-    def key_fields(cls) -> list[str]:
+    def key_field_names(cls) -> list[str]:
         return [k for k, v in cls.model_fields.items() if
                 v.annotation in [kb.Key, Optional[kb.Key], list[kb.Key], dict[str, kb.Key]]]
     
     @classmethod
     @cache
-    def table_key_fields(cls) -> list[str]:
+    def tablekey_field_names(cls) -> list[str]:
         return [k for k, v in cls.model_fields.items() if
                 v.annotation in [kb.TableKey, Optional[kb.TableKey], list[kb.TableKey], dict[str, kb.TableKey]]]
     
     @classmethod
     @cache
-    def reference_fields(cls) -> tuple[str, ...]:
-        return *cls.key_fields(), *cls.table_key_fields()
+    def dependencies_field_names(cls) -> tuple[str, ...]:
+        return *cls.key_field_names(), *cls.tablekey_field_names()
 
     @classmethod
     def singular(cls) -> str:
