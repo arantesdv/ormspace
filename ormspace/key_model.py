@@ -39,20 +39,20 @@ class KeyModel(BaseModel):
     # detabase engine
     
     @property
-    def table_key(self) -> str:
+    def tablekey_asjson(self) -> str:
         return f'{self.table()}.{self.key}'
     
     @classmethod
     @cache
-    def key_field_names(cls) -> list[str]:
-        return [k for k, v in cls.model_fields.items() if
-                v.annotation in [kb.Key, Optional[kb.Key], list[kb.Key], dict[str, kb.Key]]]
+    def key_field_names(cls) -> tuple[str, ...]:
+        return tuple([k for k, v in cls.model_fields.items() if
+                v.annotation in [kb.Key, Optional[kb.Key], list[kb.Key], dict[str, kb.Key]]])
     
     @classmethod
     @cache
-    def tablekey_field_names(cls) -> list[str]:
-        return [k for k, v in cls.model_fields.items() if
-                v.annotation in [kb.TableKey, Optional[kb.TableKey], list[kb.TableKey], dict[str, kb.TableKey]]]
+    def tablekey_field_names(cls) -> tuple[str, ...]:
+        return tuple([k for k, v in cls.model_fields.items() if
+                v.annotation in [kb.TableKey, Optional[kb.TableKey], list[kb.TableKey], dict[str, kb.TableKey]]])
     
     @classmethod
     @cache
@@ -81,13 +81,27 @@ class KeyModel(BaseModel):
     @classmethod
     def key_name(cls) -> str:
         return f'{cls.item_name()}_key'
-
-    @computed_field(repr=False)
-    @property
-    def search(self) -> str:
-        if self.SEARCH_FIELD_HANDLER:
-            return self.SEARCH_FIELD_HANDLER()
-        return functions.normalize_lower(str(self))
+    
+    
+    def detail_subpath(self):  #todo: revisar
+        return f'/detail/{self.item_name()}/{self.key}'
+    
+    def update_subpath(self):  #todo: revisar
+        return f'/update/{self.item_name()}/{self.key}'
+    
+    @classmethod
+    def list_subpath(cls):  #todo: revisar
+        return f'/list/{cls.item_name()}'
+    
+    @classmethod
+    def paginated_subpath(cls):  #todo: revisar
+        return f'/paginated/{cls.item_name()}'
+    
+    @classmethod
+    def new_subpath(cls):  #todo: revisar
+        return f'/new/{cls.item_name()}'
+    
+    
         
     @classmethod
     def item_name(cls) -> str:

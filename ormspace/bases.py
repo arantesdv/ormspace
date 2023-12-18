@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+import io
 from abc import ABC, abstractmethod
+from collections import UserString
+from enum import Enum
 from functools import cache
-from typing import Optional, TypeVar
+from re import Pattern
+from typing import Any, Optional, Type, TypeVar
 
-from pydantic import computed_field, field_serializer
+from pydantic import computed_field, field_serializer, GetCoreSchemaHandler
 from pydantic.fields import FieldInfo
+from pydantic_core import core_schema
 from typing_extensions import Self
 from deta.base import FetchResponse
 
-
+from . import functions
 from .alias import *
 
 class AbstractModel(ABC):
@@ -56,10 +61,6 @@ class AbstractModel(ABC):
     @abstractmethod
     def key_name(cls) -> str:...
     
-    @computed_field(repr=False)
-    @property
-    @abstractmethod
-    def search(self) -> str:...
     
     @classmethod
     @abstractmethod
@@ -161,4 +162,66 @@ class AbstractModel(ABC):
     async def exist(self) -> Optional[dict]:...
 
 
+
+class AbstractRegex(UserString):
+    
+    @property
+    @abstractmethod
+    def pattern(self) -> Pattern:
+        ...
+    
+    def group_dict(self) -> dict:
+        if match:= self.pattern.fullmatch(self.data):
+            return match.groupdict()
+        return {}
+    
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source: Type[Any], handler: GetCoreSchemaHandler
+    ) -> core_schema.CoreSchema:
+        return core_schema.no_info_after_validator_function(
+            cls.validate,
+            core_schema.str_schema(),
+            serialization=core_schema.plain_serializer_function_ser_schema(lambda obj: str(obj),
+                                                                           return_schema=core_schema.str_schema()),
+        )
+    @classmethod
+    def validate(cls, obj: str | None) -> Self | None:
+        if obj and isinstance(obj, str):
+            return cls(obj)
+        return None
+
+
+class AbstractEnum(Enum):
+    
+    @classmethod
+    def __get_pydantic_core_schema__(
+            cls, source: Type[Any], handler: GetCoreSchemaHandler
+    ) -> core_schema.CoreSchema:...
+    
+    @classmethod
+    def validate(cls, value: str) -> Self:...
+    
+    @classmethod
+    def _missing_(cls, value: str):...
+    
+    
+    @property
+    def display(self) -> str:
+        return self.value
+    
+    def option(self, selected: bool = False) -> str:
+        return f'<option value="{self.name}" {"selected" if selected else ""}>{self.display}</option>\n'
+    
+    @classmethod
+    def html_options(cls, selected: str = None) -> str:
+        with io.StringIO() as f:
+            for member in cls:
+                f.write(member.option(any([selected.upper() == member.name, selected.lower() == member.value.lower()])))
+            return f.getvalue()
+
+
+
 ModelType = TypeVar('ModelType', bound=AbstractModel)
+EnumType = TypeVar('EnumType', bound=AbstractEnum)
+RegexType = TypeVar('RegexType', bound=AbstractRegex)

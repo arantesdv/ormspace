@@ -194,6 +194,7 @@ class Model(km.KeyModel, bs.AbstractModel):
         exist = await self.exist()
         if not exist:
             return await self.save()
+        return None
         
 
 
@@ -227,7 +228,9 @@ def modelmap(cls: type[bs.ModelType]):
         assert issubclass(cls, Model), 'A subclass of Model is required.'
         # assert cls.EXIST_QUERY, 'cadastrar "EXIST_QUERY" na classe "{}"'.format(cls.__name__)
         cls.DATABASE = db.Database(cls)
-        cls.Key = Annotated[kb.Key, PlainSerializer(kb.Key.asjson, return_type=str), mt.MetaData(tables=[cls.classname()], item_name=cls.item_name(), model=cls)]
+        cls.Key = Annotated[kb.Key, mt.MetaData(tables=[cls.classname()], item_name=cls.item_name(), model=cls)]
+
+        # cls.Key = Annotated[kb.Key, PlainSerializer(kb.Key.asjson, return_type=str), mt.MetaData(tables=[cls.classname()], item_name=cls.item_name(), model=cls)]
         cls.KeyList = Annotated[kb.KeyList, PlainSerializer(kb.KeyList.asjson, return_type=list[str]), mt.MetaData(model=cls)]
         ModelMap[cls.item_name()]: cls = cls
         return cls

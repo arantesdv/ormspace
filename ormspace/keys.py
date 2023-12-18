@@ -38,6 +38,7 @@ class KeyBase(UserString):
                 cls.validate,
                 handler(str),
                 field_name=handler.field_name,
+                serialization=core_schema.plain_serializer_function_ser_schema(lambda x: str(x), return_schema=core_schema.str_schema())
         )
     
     @classmethod
