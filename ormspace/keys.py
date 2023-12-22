@@ -108,6 +108,9 @@ class KeyList(UserList[Key]):
                 cls.validate,
                 handler(list[Key]),
                 field_name=handler.field_name,
+                serialization=core_schema.plain_serializer_function_ser_schema(lambda x: [str(i) for i in x],
+                                                                               return_schema=core_schema.list_schema())
+        
         )
     
     @classmethod
@@ -140,8 +143,10 @@ class TableKeyList(UserList[TableKey]):
     ) -> core_schema.CoreSchema:
         return core_schema.with_info_after_validator_function(
                 cls.validate,
-                handler(list[Key]),
+                handler(list[TableKey]),
                 field_name=handler.field_name,
+                serialization=core_schema.plain_serializer_function_ser_schema(lambda x: [str(i) for i in x],
+                                                                               return_schema=core_schema.list_schema())
         )
     
     @classmethod

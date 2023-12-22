@@ -19,7 +19,6 @@ from .alias import *
 context = ctx = copy_context()
 
 
-
 class Database:
     def __init__(self, model: type[ModelType], settings: SpaceSettings = None):
         try:
@@ -32,29 +31,33 @@ class Database:
         
     @property
     def deta_data_key(self):
+        """
+        The project data key used for Deta Space.
+        :return: str
+        """
         return self.settings.data_key
 
     # context
     @staticmethod
-    async def update_dependants_context_data(dependants: list[type[ModelType]], lazy: bool = False,
+    async def update_dependencies(dependencies: list[type[ModelType]], lazy: bool = False,
                                queries: QUERIES = None) -> None:
         """
         Populate context with data from database, as a dictionary of key and object data.
-        :param dependants: list of dependants models.
+        :param dependencies: list of dependants models.
         :param lazy: if True will try first cached model data in context.
         :param queries: a dict of querie for each model
         :return: None
         """
         if not queries:
             async with create_task_group() as tks:
-                for item in dependants:
-                    tks.start_soon(item.update_model_context_data, lazy, item.FETCH_QUERY)
+                for item in dependencies:
+                    tks.start_soon(item.update_model_context, lazy, item.FETCH_QUERY)
         else:
             async with create_task_group() as tks:
-                for item in dependants:
-                    tks.start_soon(item.update_model_context_data, lazy, queries.get(item.item_name(), None))
+                for item in dependencies:
+                    tks.start_soon(item.update_model_context, lazy, queries.get(item.item_name(), item.FETCH_QUERY))
     
-    def object_data(self, key: str) -> Optional[dict]:
+    def object(self, key: str) -> Optional[dict]:
         """
         Retrieve object context data from key.
         :param key: the unique identifier of the object
@@ -66,13 +69,13 @@ class Database:
                     return data
         return None
     
-    def model_instance(self, key: str) -> Optional[ModelType]:
+    def instance(self, key: str) -> Optional[ModelType]:
         """
         Retrieve instance using context data from key.
         :param key: the unique identifier of the object
         :return: model subclass instance
         """
-        if data := self.object_data(key):
+        if data := self.object(key):
             return self.model(**data)
         return None
     
@@ -87,7 +90,7 @@ class Database:
         except BaseException as e:
             raise exception.ContextException(f'{e}: {self.model.classname()} não possuir ContextVar')
     
-    async def set_context_data(self, *, lazy: bool = False, query: dict | list[dict] | None = None) -> None:
+    async def set_context(self, *, lazy: bool = False, query: dict | list[dict] | None = None) -> None:
         """
         Set context data for the model of the database instance (self.model).
         :param lazy: True will return current context data if exists, otherwise will populate model context.
@@ -108,20 +111,12 @@ class Database:
             )
     
     @property
-    def data_key(self) -> str:
-        """
-        The project data key used for Deta Space.
-        :return: str
-        """
-        return self.settings.data_key
-    
-    @property
     def project_id(self) -> str:
         """
         The project id of data key.
         :return: str
         """
-        return self.data_key.split('_')[0]
+        return self.deta_data_key.split('_')[0]
     
     def async_base(self, host: str | None = None) -> Deta.AsyncBase:
         """
@@ -243,8 +238,10 @@ class Database:
     async def insert(self, data: DATA, key: KEY = None, *, expire_in: EXPIRE_IN = None,
                      expire_at: EXPIRE_AT = None) -> dict:
         """
-        Inserts a single item, but is different from put in that it will throw an error of the key already exists in the Base.
-        :return: Returns a dict with the item’s data. If key already exists, raises an Exception. If key is not a non-empty string, raises a ValueError. If the operation did not complete successfully, raises an Exception.
+        Inserts a single item, but is different from put in that it will throw an error of the key already exists in
+        the Base.
+        :return: Returns a dict with the item’s data. If key already exists, raises an Exception. If key is not a
+        non-empty string, raises a ValueError. If the operation did not complete successfully, raises an Exception.
         """
         base = self.async_base()
         _key = key or data.pop('key', None)

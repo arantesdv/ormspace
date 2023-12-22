@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ormspace"
-version = "0.1.8"
+version = "0.1.9"
 description = "Pydantic models working with deta.space api, including ORM features."
 authors = ["Daniel Arantes <arantesdv@me.com>"]
 license = "MIT"

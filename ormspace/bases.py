@@ -6,22 +6,36 @@ from collections import UserString
 from enum import Enum
 from functools import cache
 from re import Pattern
-from typing import Any, Optional, Type, TypeVar
+from typing import Any, Callable, ClassVar, Optional, Type, TypeVar, Union
 
-from pydantic import computed_field, field_serializer, GetCoreSchemaHandler
+from pydantic import BaseModel, computed_field, ConfigDict, field_serializer, GetCoreSchemaHandler
 from pydantic.fields import FieldInfo
 from pydantic_core import core_schema
 from typing_extensions import Self
 from deta.base import FetchResponse
 
-from . import functions
+
 from .alias import *
 
-class AbstractModel(ABC):
+class AbstractModel(BaseModel):
+    """This is a base class of every object model in deta space database.
+    :param key: the key parameter of the instance
+    :type key: str | None
+    """
+    # model config
+    model_config = ConfigDict(extra='allow', str_strip_whitespace=True, arbitrary_types_allowed=True)
+
+    key: Optional[str] = None
+    
+    @field_serializer('key')
+    def key_serializer(self, v: str | None, _info) -> Optional[str]:
+        if v:
+            return v
+        return None
     
     @property
     @abstractmethod
-    def table_key(self) -> str:...
+    def tablekey(self) -> str:...
     
     @classmethod
     @cache
@@ -59,16 +73,12 @@ class AbstractModel(ABC):
     
     @classmethod
     @abstractmethod
-    def key_name(cls) -> str:...
+    def model_key_name(cls) -> str:...
     
     
     @classmethod
     @abstractmethod
     def item_name(cls) -> str:...
-    
-    @field_serializer('key')
-    @abstractmethod
-    def key_serializer(self, v: str | None, _info) -> Optional[str]:...
     
     @abstractmethod
     def asjson(self) -> dict:...
@@ -78,19 +88,19 @@ class AbstractModel(ABC):
     
     @classmethod
     @abstractmethod
-    async def update_model_context_data(cls, lazy: bool = False, query: QUERY = None) -> None:...
+    async def update_model_context(cls, lazy: bool = False, query: QUERY = None) -> None:...
     
     @classmethod
     @abstractmethod
-    def current_model_context(cls) -> dict[str, dict]:...
+    def context_data(cls) -> dict[str, dict]:...
     
     @classmethod
     @abstractmethod
-    def get_context_value_by_key(cls, key: str) -> JSON :...
+    def object(cls, key: str) -> JSON :...
     
     @classmethod
     @abstractmethod
-    def get_context_instance(cls, key: str) -> Self:...
+    def instance(cls, key: str) -> Self:...
     
     @classmethod
     @abstractmethod
@@ -104,32 +114,32 @@ class AbstractModel(ABC):
     @classmethod
     @cache
     @abstractmethod
-    def key_field_models(cls) -> list[type[ModelType]]:...
+    def key_dependencies(cls) -> list[type[ModelType]]:...
 
     @classmethod
     @cache
     @abstractmethod
-    def table_key_field_models(cls) -> list[type[ModelType]]:...
+    def tablekey_dependencies(cls) -> list[type[ModelType]]:...
     
     @classmethod
     @cache
     @abstractmethod
-    def dependents(cls)  -> list[type[ModelType]]:...
+    def dependencies(cls)  -> list[type[ModelType]]:...
 
     @classmethod
     @cache
     @abstractmethod
-    def primary_dependents(cls) -> list[type[ModelType]]:...
+    def primary_dependencies(cls) -> list[type[ModelType]]:...
     
     @classmethod
     @cache
     @abstractmethod
-    def dependent_fields(cls) -> list[FieldInfo]:...
+    def dependency_fieldinfo_list(cls) -> list[FieldInfo]:...
     
     @classmethod
     @cache
     @abstractmethod
-    def instance_property_name(cls, name: str):...
+    def instance_name_for(cls, name: str):...
     
     @classmethod
     @abstractmethod
@@ -152,7 +162,7 @@ class AbstractModel(ABC):
     
     @classmethod
     @abstractmethod
-    async def update_dependants_context_data(cls, lazy: bool = False, queries: QUERIES = None) -> None:...
+    async def update_dependencies_context(cls, lazy: bool = False, queries: QUERIES = None) -> None:...
     
     @classmethod
     @abstractmethod
@@ -164,6 +174,10 @@ class AbstractModel(ABC):
 
 
 class AbstractRegex(UserString):
+    def __init__(self, value: str) -> None:
+        super().__init__(value)
+        for k, v in self.group_dict():
+            setattr(self, k, v)
     
     @property
     @abstractmethod
@@ -204,7 +218,6 @@ class AbstractEnum(Enum):
     
     @classmethod
     def _missing_(cls, value: str):...
-    
     
     @property
     def display(self) -> str:

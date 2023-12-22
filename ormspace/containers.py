@@ -30,7 +30,7 @@ class ListOfUniques(UserList):
         return self.data
             
 
-class ModelPrimaryDependents(UserDict):
+class ModelPrimaryDependencies(UserDict):
     def __init__(self, model_or_instance: ModelType | type[ModelType]):
         if isinstance(model_or_instance, type):
             self.model = model_or_instance
@@ -38,10 +38,11 @@ class ModelPrimaryDependents(UserDict):
         else:
             self.model = type(model_or_instance)
             self.instance = model_or_instance
-        self.dependents = {m.item_name(): ModelPrimaryDependents(m) for m in self.model.primary_dependents()}
-        super().__init__({'model': self.model, 'instance': self.instance, 'dependents': {m.item_name(): ModelPrimaryDependents(m) for m in self.model.primary_dependents()}})
+        self.dependents = {m.item_name(): ModelPrimaryDependencies(m) for m in self.model.primary_dependents()}
+        super().__init__({'model': self.model, 'instance': self.instance, 'dependents': {m.item_name(): ModelPrimaryDependencies(m) for m in self.model.primary_dependents()}})
 
-class ModelDependantTree(UserDict):
+
+class ModelDependencyTree(UserDict):
     def __init__(self, model_or_instance: ModelType | type[ModelType]):
         if isinstance(model_or_instance, type):
             self.is_instance = False
@@ -60,11 +61,9 @@ class ModelDependantTree(UserDict):
         data = {'model': self.model, 'instance': self.instance, 'references': {}}
         for item in self.reference_fiels:
             index = self.reference_fiels.index(item)
-            data['references'][item] = {'model': self.reference_models[index], 'value': self.reference_values[index], 'tree': ModelDependantTree(self.reference_models[index])}
+            data['references'][item] = {'model': self.reference_models[index], 'value': self.reference_values[index], 'tree': ModelDependencyTree(self.reference_models[index])}
         super().__init__(data)
         
-
-
     @property
     def metadata(self):
         return self.data.get('metadata', {})

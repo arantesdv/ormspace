@@ -52,5 +52,5 @@ class Gender(StrEnum):
 
     
 if __name__ == '__main__':
-    print(Gender.html_options('y'))
+    print(Gender.html_options('m'))
     
