@@ -9,13 +9,15 @@ from re import Pattern
 from typing import Any, Callable, ClassVar, Optional, Type, TypeVar, Union
 
 from pydantic import BaseModel, computed_field, ConfigDict, field_serializer, GetCoreSchemaHandler
-from pydantic.fields import FieldInfo
+from pydantic.fields import Field, FieldInfo
 from pydantic_core import core_schema
 from typing_extensions import Self
 from deta.base import FetchResponse
 
 
 from .alias import *
+
+
 
 class AbstractModel(BaseModel):
     """This is a base class of every object model in deta space database.
@@ -206,7 +208,7 @@ class AbstractRegex(UserString):
         return None
 
 
-class AbstractEnum(Enum):
+class BaseEnum(Enum):
     
     @classmethod
     def __get_pydantic_core_schema__(
@@ -236,5 +238,5 @@ class AbstractEnum(Enum):
 
 
 ModelType = TypeVar('ModelType', bound=AbstractModel)
-EnumType = TypeVar('EnumType', bound=AbstractEnum)
+EnumType = TypeVar('EnumType', bound=BaseEnum)
 RegexType = TypeVar('RegexType', bound=AbstractRegex)

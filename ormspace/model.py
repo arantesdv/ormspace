@@ -34,16 +34,21 @@ class Model(bs.AbstractModel):
     Key: ClassVar[Annotated] = None
     KeyList: ClassVar[Annotated] = None
     
+    
+    
+    
     def model_post_init(self, __context: Any) -> None:
         super().model_post_init(__context)
         for k, v in self.model_fields.items():
             if k in self.key_field_names():
-                if key:= getattr(self, k):
-                    item_name = k.replace('_key', '')
-                    setattr(self, item_name, getmodel(item_name).Database.instance(key))
+                getattr(self, k).set_instance(getmodel(self.instance_name_for(k)).Database.instance(str(getattr(self, k))))
             elif k in self.tablekey_field_names():
-                if tablekey:= getattr(self, k):
-                    setattr(self, tablekey.item_name, getmodel(tablekey.table).Database.instance(tablekey.key))
+                if tk:= getattr(self, k):
+                    tk.set_instance(tk.table).Database.instance(tk.key)
+                # getattr(self, k).set_instance(getmodel(self.instance_name_for(k)).Database.instance(str(getattr(self, k))))
+
+                # if tablekey:= getattr(self, k):
+                #     setattr(self, tablekey.item_name, getmodel(tablekey.table).Database.instance(tablekey.key))
     @property
     def tablekey(self) -> str:
         return f'{self.table()}.{self.key}'
@@ -135,7 +140,7 @@ class Model(bs.AbstractModel):
     def key_dependencies(cls):
         result = []
         for item in cls.key_field_names():
-            if meta:= mt.MetaData.merge(mt.MetaData.field_info(cls, item)):
+            if meta:= mt.MetaData.compile(mt.MetaData.field_info(cls, item)):
                 result.extend([getmodel(i) for i in meta.tables])
         return functions.filter_uniques(result)
 
@@ -144,7 +149,7 @@ class Model(bs.AbstractModel):
     def tablekey_dependencies(cls):
         result = []
         for item in cls.tablekey_field_names():
-            if meta:= mt.MetaData.merge(mt.MetaData.field_info(cls, item)):
+            if meta:= mt.MetaData.compile(mt.MetaData.field_info(cls, item)):
                 result.extend([getmodel(i) for i in meta.tables])
         return functions.filter_uniques(functions.filter_not_none(result))
     
@@ -179,7 +184,7 @@ class Model(bs.AbstractModel):
     @classmethod
     @cache
     def instance_name_for(cls, name: str):
-        meta = mt.MetaData.merge(mt.MetaData.field_info(cls, name))
+        meta = mt.MetaData.compile(mt.MetaData.field_info(cls, name))
         return meta.item_name or name.replace('_key', '')
 
     
@@ -319,7 +324,6 @@ def modelmap(cls: type[bs.ModelType]):
         cls.Database = db.Database(cls)
         cls.Key = Annotated[kb.Key, mt.MetaData(tables=[cls.classname()], item_name=cls.item_name(), model=cls)]
         cls.KeyList = Annotated[kb.KeyList, mt.MetaData(model=cls, tables=[cls.classname()], item_name=f'{cls.item_name()}_list')]
-
         # cls.Key = Annotated[kb.Key, PlainSerializer(kb.Key.asjson, return_type=str), mt.MetaData(tables=[cls.classname()], item_name=cls.item_name(), model=cls)]
         # cls.KeyList = Annotated[kb.KeyList, PlainSerializer(kb.KeyList.asjson, return_type=list[str]), mt.MetaData(model=cls)]
         ModelMap[cls.item_name()]: cls = cls

@@ -14,15 +14,14 @@ from .bases import ModelType
 @dataclasses.dataclass
 class MetaData:
     form_field: Optional[str] = None
-    step: Optional[Union[int, float]] = None
-    height: Optional[str] = None
     tables: list[str] = dataclasses.field(default_factory=list)
     item_name: Optional[str] = None
     config: Optional[str] = ''
     model: Optional[type[ModelType]] = None
+    style: dict[str, str] = dataclasses.field(default_factory=dict)
     
     def __hash__(self):
-        return hash((self.form_field or 0, self.step or 0, functions.join(self.tables), self.item_name, self.config, self.model.classname()))
+        return hash((self.form_field or 0, functions.join(self.tables), self.item_name, self.config, self.model.classname() if self.model else 0, self.style))
     
     def __repr__(self):
         fds = (f for f in dataclasses.fields(self) if getattr(self, f.name))
@@ -46,13 +45,20 @@ class MetaData:
         return None
     
     @classmethod
-    def merge(cls, field_info: FieldInfo) -> Self:
+    def compile(cls, _field_info: FieldInfo) -> Self:
         result = dict()
-        for item in functions.filter_by_type(field_info.metadata, cls):
+        for item in functions.filter_by_type(_field_info.metadata, cls):
             result.update({k: v for k, v in item.asdict().items() if v})
         return cls(**result)
     
     @staticmethod
-    def field_info(model: type['ModelType'], name: str) -> FieldInfo:
+    def field_info(model: type[ModelType], name: str) -> FieldInfo:
         return model.model_fields[name]
 
+
+
+def field_info(model: type[ModelType], name: str) -> FieldInfo:
+    return model.model_fields[name]
+
+def field_metadata(model: type[ModelType], name: str) -> list:
+    return model.model_fields[name].metadata

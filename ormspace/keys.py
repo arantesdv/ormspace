@@ -10,10 +10,11 @@ import re
 from typing import Any, TypeVar
 from collections import UserList, UserString
 
-from pydantic import GetCoreSchemaHandler
+from pydantic import Field, GetCoreSchemaHandler
 from pydantic_core import core_schema
 from pydantic_core.core_schema import ValidationInfo
 
+from ormspace.bases import ModelType
 
 table_key_pattern: re.Pattern = re.compile(r'^((?P<table>\w+)\.)?(?P<key>\w+)')
 
@@ -25,6 +26,11 @@ class KeyBase(UserString):
     """
     value: str | None
     info: ValidationInfo
+    instance: ModelType = Field(None, init_var=False)
+    
+    
+    def set_instance(self, value: ModelType):
+        self.instance = value
     
     @property
     def field_name(self):
@@ -55,35 +61,40 @@ class Key(KeyBase):
     def __init__(self, value: str | None, info: ValidationInfo):
         self.value = value
         self.info = info
-        
-        if self.value:
-            self.key = self.value
-        else:
-            self.key = None
-        
         super().__init__(self.key or '')
-
+        
+    @property
+    def key(self):
+        if self.value:
+            return self.value
+        else:
+            return None
 
 
 class TableKey(KeyBase):
     def __init__(self, value: str | None, info: ValidationInfo):
         self.value = value or ""
         self.info = info
+        self.groupdict: dict = {}
         
         if self.value:
             if match := table_key_pattern.search(self.value):
-                groupdict = match.groupdict()
-                self.table = groupdict.get('table')
-                self.key = groupdict.get('key')
-        else:
-            self.table, self.key = None, None
+                self.groupdict = match.groupdict()
             
         if self.table and self.key:
             super().__init__(f'{self.table}.{self.key}')
         else:
             super().__init__('')
-
-
+            
+    @property
+    def table(self):
+        return self.groupdict.get('table', None)
+    
+    @property
+    def key(self):
+        return self.groupdict.get('key', None)
+        
+        
 class KeyList(UserList[Key]):
     value: list[Key]
     info: ValidationInfo

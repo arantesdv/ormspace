@@ -8,10 +8,10 @@ from pydantic_core import core_schema
 from typing_extensions import Self
 
 from ormspace import functions
-from ormspace.bases import AbstractEnum
+from ormspace.bases import BaseEnum
 
 
-class StrEnum(AbstractEnum):
+class StrEnum(BaseEnum):
     
     @classmethod
     def __get_pydantic_core_schema__(
