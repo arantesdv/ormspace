@@ -28,4 +28,4 @@ class SpaceSettings(BaseSettings):
     
     
     
-space_settings = SettingsConfigDict()
+space_settings = SpaceSettings()
