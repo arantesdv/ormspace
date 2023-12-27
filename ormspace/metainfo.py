@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import  Optional, Union
+from typing import  Optional
 
 from pydantic.fields import FieldInfo
 from typing_extensions import Self
 
-from . import functions
-from .bases import ModelType
+from ormspace import functions
+from ormspace.bases import ModelType
 
 
 
 @dataclasses.dataclass
-class MetaData:
+class MetaInfo:
     form_field: Optional[str] = None
     tables: list[str] = dataclasses.field(default_factory=list)
     item_name: Optional[str] = None
@@ -25,7 +25,7 @@ class MetaData:
     
     def __repr__(self):
         fds = (f for f in dataclasses.fields(self) if getattr(self, f.name))
-        return 'MetaData({})'.format(', '.join([f'{f.name}={getattr(self, f.name)}' for f in list(fds)]))
+        return 'MetaInfo({})'.format(', '.join([f'{f.name}={getattr(self, f.name)}' for f in list(fds)]))
     
     def asdict(self):
         return dataclasses.asdict(self)
@@ -62,3 +62,6 @@ def field_info(model: type[ModelType], name: str) -> FieldInfo:
 
 def field_metadata(model: type[ModelType], name: str) -> list:
     return model.model_fields[name].metadata
+
+def field_metainfo(model: type[ModelType], name: str) -> MetaInfo:
+    return MetaInfo.compile(MetaInfo.field_info(model, name))

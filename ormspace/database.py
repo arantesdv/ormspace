@@ -10,10 +10,10 @@ from anyio import create_task_group
 from deta import Deta
 from deta.base import FetchResponse
 
-from . import exception, functions
-from .settings import SpaceSettings
-from .bases import ModelType
-from .alias import *
+from ormspace import exception, functions
+from ormspace.space_settings import space_settings, SpaceSettings
+from ormspace.bases import ModelType
+from ormspace.alias import *
 
 
 context = ctx = copy_context()
@@ -23,7 +23,7 @@ class Database:
     def __init__(self, model: type[ModelType], settings: SpaceSettings = None):
         try:
             self.model = model
-            self.settings = settings or SpaceSettings()
+            self.settings = settings or space_settings
             self.deta = Deta(self.deta_data_key)
             self.contextvar = ContextVar(f'{self.model.classname()}Var', default=dict())
         except BaseException as e:

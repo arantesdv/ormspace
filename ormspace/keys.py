@@ -28,7 +28,6 @@ class KeyBase(UserString):
     info: ValidationInfo
     instance: ModelType = Field(None, init_var=False)
     
-    
     def set_instance(self, value: ModelType):
         self.instance = value
     
@@ -98,6 +97,8 @@ class TableKey(KeyBase):
 class KeyList(UserList[Key]):
     value: list[Key]
     info: ValidationInfo
+    instances: list[ModelType] = Field(init_var=False, default_factory=list)
+
     
     def __init__(self, value: list[str], info: ValidationInfo):
         self.value = value or []
@@ -135,6 +136,8 @@ class KeyList(UserList[Key]):
 class TableKeyList(UserList[TableKey]):
     value: list[TableKey]
     info: ValidationInfo
+    instances: list[ModelType] = Field(init_var=False, default_factory=list)
+
     
     def __init__(self, value: list[str], info: ValidationInfo):
         self.value = value or []

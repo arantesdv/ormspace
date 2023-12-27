@@ -1,3 +1,5 @@
+__all__ = ['SpaceSettings', 'space_settings']
+
 import os
 from typing import Optional
 
@@ -26,4 +28,4 @@ class SpaceSettings(BaseSettings):
     
     
     
-
+space_settings = SettingsConfigDict()

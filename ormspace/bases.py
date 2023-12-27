@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+__all__ = ['AbstractModel', 'AbstractRegex', 'BaseEnum', 'RegexType', 'EnumType', 'ModelType']
+
 import io
+import re
 from abc import ABC, abstractmethod
 from collections import UserString
 from enum import Enum
@@ -15,7 +18,7 @@ from typing_extensions import Self
 from deta.base import FetchResponse
 
 
-from .alias import *
+from ormspace.alias import *
 
 
 
@@ -136,7 +139,7 @@ class AbstractModel(BaseModel):
     @classmethod
     @cache
     @abstractmethod
-    def dependency_fieldinfo_list(cls) -> list[FieldInfo]:...
+    def dependencies_fieldinfo_list(cls) -> list[FieldInfo]:...
     
     @classmethod
     @cache
@@ -177,17 +180,40 @@ class AbstractModel(BaseModel):
 
 class AbstractRegex(UserString):
     def __init__(self, value: str) -> None:
-        super().__init__(value)
-        for k, v in self.group_dict():
+        self.value = value
+        for k, v in self.group_dict().items():
             setattr(self, k, v)
+        super().__init__(self.resolve)
+
     
     @property
     @abstractmethod
     def pattern(self) -> Pattern:
         ...
     
+    @property
+    @abstractmethod
+    def resolve(self) -> str:
+        ...
+    
+    @property
+    def findall(self):
+        return self.pattern.findall(self.value)
+    
+    @property
+    def search(self):
+        return self.pattern.search(self.value)
+    
+    @property
+    def match(self):
+        return self.pattern.match(self.value)
+    
+    @property
+    def fullmatch(self):
+        return self.pattern.fullmatch(self.value)
+    
     def group_dict(self) -> dict:
-        if match:= self.pattern.fullmatch(self.data):
+        if match:= self.fullmatch:
             return match.groupdict()
         return {}
     
@@ -229,10 +255,10 @@ class BaseEnum(Enum):
         return f'<option value="{self.name}" {"selected" if selected else ""}>{self.display}</option>\n'
     
     @classmethod
-    def html_options(cls, selected: str = None) -> str:
+    def html_options(cls, value: str = None) -> str:
         with io.StringIO() as f:
             for member in cls:
-                f.write(member.option(any([selected.upper() == member.name, selected.lower() == member.value.lower()])))
+                f.write(member.option(any([value.upper() == member.name, value.lower() == member.value.lower()])))
             return f.getvalue()
 
 

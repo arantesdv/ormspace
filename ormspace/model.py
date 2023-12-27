@@ -8,24 +8,23 @@ from collections import ChainMap, defaultdict, UserDict
 
 from anyio import create_task_group
 from deta.base import FetchResponse
-from pydantic import ConfigDict, field_serializer, PlainSerializer
+from pydantic import computed_field, ConfigDict, field_serializer, PlainSerializer
 from typing_extensions import Self
 
-from . import exception, functions
-from . import keys as kb
-from . import metadata as mt
-from . import database as db
-from . import containers as ct
-from . import bases as bs
-from .alias import JSONDICT, QUERY
-from .database import Database
+from ormspace import exception, functions
+from ormspace import keys as kb
+from ormspace import metainfo as mt
+from ormspace import database as db
+from ormspace import containers as ct
+from ormspace import bases as bs
+from ormspace.alias import JSONDICT, QUERY
+from ormspace.database import Database
 
 
 class Model(bs.AbstractModel):
     EXTRA_DEPENDENTS: ClassVar[list[str]] = []
     EXIST_QUERY: ClassVar[Union[str, list[str]]] = None
     FETCH_QUERY: ClassVar[Union[dict, list[dict]]] = None
-    SEARCH_FIELD_HANDLER: ClassVar[Callable[[Self], str]] = None
     SINGULAR: ClassVar[str] = None
     PLURAL: ClassVar[str] = None
     TABLE_NAME: ClassVar[str] = None
@@ -35,13 +34,12 @@ class Model(bs.AbstractModel):
     KeyList: ClassVar[Annotated] = None
     
     
-    
-    
     def model_post_init(self, __context: Any) -> None:
         super().model_post_init(__context)
         for k, v in self.model_fields.items():
             if k in self.key_field_names():
-                getattr(self, k).set_instance(getmodel(self.instance_name_for(k)).Database.instance(str(getattr(self, k))))
+                fd = getattr(self, k)
+                fd.set_instance(getmodel(self.instance_name_for(k)).Database.instance(fd.key))
             elif k in self.tablekey_field_names():
                 if tk:= getattr(self, k):
                     tk.set_instance(tk.table).Database.instance(tk.key)
@@ -131,7 +129,7 @@ class Model(bs.AbstractModel):
         return [cls(**i) for i in cls.context_data().values()]
     
     @classmethod
-    async def sorted_instances_list(cls, *, lazy: bool = True, query: dict | list[dict] | None = None):
+    async def sorted_instances_list(cls, *, lazy: bool = False, query: dict | list[dict] | None = None):
         await cls.update_dependencies_context(lazy=lazy)
         return sorted(await cls.instances_list(lazy=lazy, query=query))
     
@@ -140,7 +138,7 @@ class Model(bs.AbstractModel):
     def key_dependencies(cls):
         result = []
         for item in cls.key_field_names():
-            if meta:= mt.MetaData.compile(mt.MetaData.field_info(cls, item)):
+            if meta:= mt.MetaInfo.compile(mt.MetaInfo.field_info(cls, item)):
                 result.extend([getmodel(i) for i in meta.tables])
         return functions.filter_uniques(result)
 
@@ -149,7 +147,7 @@ class Model(bs.AbstractModel):
     def tablekey_dependencies(cls):
         result = []
         for item in cls.tablekey_field_names():
-            if meta:= mt.MetaData.compile(mt.MetaData.field_info(cls, item)):
+            if meta:= mt.MetaInfo.compile(mt.MetaInfo.field_info(cls, item)):
                 result.extend([getmodel(i) for i in meta.tables])
         return functions.filter_uniques(functions.filter_not_none(result))
     
@@ -178,13 +176,13 @@ class Model(bs.AbstractModel):
     
     @classmethod
     @cache
-    def dependency_fieldinfo_list(cls):
-        return functions.filter_not_none([*cls.key_field_names(), *cls.tablekey_field_names()])
+    def dependencies_fieldinfo_list(cls):
+        return [cls.model_fields[i] for i in functions.filter_not_none([*cls.key_field_names(), *cls.tablekey_field_names()])]
     
     @classmethod
     @cache
     def instance_name_for(cls, name: str):
-        meta = mt.MetaData.compile(mt.MetaData.field_info(cls, name))
+        meta = mt.MetaInfo.compile(mt.MetaInfo.field_info(cls, name))
         return meta.item_name or name.replace('_key', '')
 
     
@@ -322,10 +320,10 @@ def modelmap(cls: type[bs.ModelType]):
         assert issubclass(cls, Model), 'A subclass of Model is required.'
         # assert cls.EXIST_QUERY, 'cadastrar "EXIST_QUERY" na classe "{}"'.format(cls.__name__)
         cls.Database = db.Database(cls)
-        cls.Key = Annotated[kb.Key, mt.MetaData(tables=[cls.classname()], item_name=cls.item_name(), model=cls)]
-        cls.KeyList = Annotated[kb.KeyList, mt.MetaData(model=cls, tables=[cls.classname()], item_name=f'{cls.item_name()}_list')]
-        # cls.Key = Annotated[kb.Key, PlainSerializer(kb.Key.asjson, return_type=str), mt.MetaData(tables=[cls.classname()], item_name=cls.item_name(), model=cls)]
-        # cls.KeyList = Annotated[kb.KeyList, PlainSerializer(kb.KeyList.asjson, return_type=list[str]), mt.MetaData(model=cls)]
+        cls.Key = Annotated[kb.Key, mt.MetaInfo(tables=[cls.classname()], item_name=cls.item_name(), model=cls)]
+        cls.KeyList = Annotated[kb.KeyList, mt.MetaInfo(model=cls, tables=[cls.classname()], item_name=f'{cls.item_name()}_list')]
+        # cls.Key = Annotated[kb.Key, PlainSerializer(kb.Key.asjson, return_type=str), mt.MetaInfo(tables=[cls.classname()], item_name=cls.item_name(), model=cls)]
+        # cls.KeyList = Annotated[kb.KeyList, PlainSerializer(kb.KeyList.asjson, return_type=list[str]), mt.MetaInfo(model=cls)]
         ModelMap[cls.item_name()]: cls = cls
         return cls
     return wrapper()
@@ -340,3 +338,13 @@ def getmodel(value: str) -> type[bs.ModelType]:
             return ModelMap.get(value, None)
 
 
+class SearchModel(Model):
+    SEARCH_FIELD_HANDLER: ClassVar[Callable[[Self], str]] = None
+
+
+    @computed_field(repr=False)
+    @property
+    def search(self) -> str:
+        if self.SEARCH_FIELD_HANDLER:
+            return self.SEARCH_FIELD_HANDLER()
+        return functions.normalize_lower(str(self))
