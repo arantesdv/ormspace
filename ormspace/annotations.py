@@ -13,6 +13,7 @@ def bytes_to_str(value: bytes) -> str:
     return value.decode("utf-8")
 
 
+BytesField = Annotated[bytes, PlainSerializer(bytes_to_str, return_type=str)]
 PasswordField = Annotated[bytes, PlainSerializer(bytes_to_str, return_type=str)]
 TitleField = Annotated[str, AfterValidator(functions.title_caps)]
 LowerStringField = Annotated[str, AfterValidator(lambda x: x.lower() if x else '')]

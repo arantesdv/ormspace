@@ -21,7 +21,9 @@ class MetaInfo:
     style: dict[str, str] = dataclasses.field(default_factory=dict)
     
     def __hash__(self):
-        return hash((self.form_field or 0, functions.join(self.tables), self.item_name, self.config, self.model.classname() if self.model else 0, self.style))
+        return hash(repr(self))
+        # return hash((self.form_field or 0, functions.join(self.tables), self.item_name, self.config,
+        #              self.model.classname() if self.model else 0, str(self.style)))
     
     def __repr__(self):
         fds = (f for f in dataclasses.fields(self) if getattr(self, f.name))
