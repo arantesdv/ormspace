@@ -57,28 +57,29 @@ class Database:
                 for item in dependencies:
                     tks.start_soon(item.update_model_context, lazy, queries.get(item.item_name(), item.FETCH_QUERY))
     
-    def object(self, key: str) -> Optional[dict]:
+    def object_from_context(self, key: str) -> Optional[dict]:
         """
         Retrieve object context data from key.
         :param key: the unique identifier of the object
         :return: json object from database for key
         """
-        if value := self.context_data():
+        if value := self.context_data:
             if isinstance(value, dict):
                 if data := value.get(key):
                     return data
         return None
     
-    def instance(self, key: str) -> Optional[ModelType]:
+    def instance_from_context(self, key: str) -> Optional[ModelType]:
         """
         Retrieve instance using context data from key.
         :param key: the unique identifier of the object
         :return: model subclass instance
         """
-        if data := self.object(key):
+        if data := self.object_from_context(key):
             return self.model(**data)
         return None
     
+    @property
     def context_data(self) -> dict[str, dict]:
         """
         Retrieve all context data for the model subclass.
@@ -98,8 +99,12 @@ class Database:
         :return: None
         """
         key = functions.new_getter('key')
+
+        if query:
+            lazy = False
+            
         if lazy:
-            if not self.context_data():
+            if not self.context_data:
                 context.run(
                         self.contextvar.set,
                         {key(i): i for i in await self.model.fetch_all(query=query or self.model.FETCH_QUERY)}

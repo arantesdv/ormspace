@@ -34,19 +34,19 @@ class Model(bs.AbstractModel):
     KeyList: ClassVar[Annotated] = None
     
     
+    @classmethod
+    def context_data(cls) -> dict:
+        return cls.Database.context_data
+    
+    @classmethod
+    def instances_from_context(cls):
+        return [cls(**i) for i in cls.context_data().values()]
+    
+    
     def model_post_init(self, __context: Any) -> None:
         super().model_post_init(__context)
-        for k, v in self.model_fields.items():
-            if k in self.key_field_names():
-                fd = getattr(self, k)
-                fd.set_instance(getmodel(self.instance_name_for(k)).Database.instance(fd.key))
-            elif k in self.tablekey_field_names():
-                if tk:= getattr(self, k):
-                    tk.set_instance(tk.table).Database.instance(tk.key)
-                # getattr(self, k).set_instance(getmodel(self.instance_name_for(k)).Database.instance(str(getattr(self, k))))
+        self.set_instance_dependencies()
 
-                # if tablekey:= getattr(self, k):
-                #     setattr(self, tablekey.item_name, getmodel(tablekey.table).Database.instance(tablekey.key))
     @property
     def tablekey(self) -> str:
         return f'{self.table()}.{self.key}'
@@ -99,39 +99,57 @@ class Model(bs.AbstractModel):
         return json.loads(self.model_dump_json())
     
     def model_fields_asjson(self) -> JSONDICT:
-        data = self.asjson()
-        result = {}
-        keys = [*self.model_fields.keys(), *self.model_computed_fields.keys()]
-        for k in data.keys():
-            if k in keys:
-                result[k] = data[k]
-        return result
+        return {key: value for key, value in self.asjson().items()
+                if key in [*self.model_fields.keys(), *self.model_computed_fields.keys()]}
+    
+    def set_instance_dependencies(self):
+        for k, v in self.model_fields.items():
+            if k in self.key_field_names():
+                fd = getattr(self, k)
+                if not fd.instance:
+                    fd.set_instance(getmodel(self.instance_name_for(k)).Database.instance_from_context(fd.key))
+            elif k in self.tablekey_field_names():
+                if tk := getattr(self, k):
+                    tk.set_instance(tk.table).Database.instance_from_context(tk.key)
+    
+    async def update_instance_context(self):
+        if data:= self.asjson():
+            async with create_task_group() as tks:
+                for m in self.dependencies():
+                    if mkn:= m.model_key_name() in data:
+                        tks.start_soon(m.update_model_context, False, {'key': data[mkn]})
+        self.set_instance_dependencies()
+    
+    @classmethod
+    async def fetch_instance(cls, key: str) -> Self:
+        # await cls.update_dependencies_context(queries={cls.item_name(): {'key': key}})
+        return cls(**await cls.fetch_one(key))
+        
     
     @classmethod
     async def update_model_context(cls, lazy: bool = False, query: dict | list[dict] | None = None) -> None:
         return await cls.Database.set_context(lazy=lazy, query=query)
     
     @classmethod
-    def context_data(cls) -> dict[str, dict]:
-        return cls.Database.context_data()
+    def object_from_context(cls, key: str):
+        return cls.Database.object_from_context(key=key)
     
     @classmethod
-    def object(cls, key: str):
-        return cls.Database.object(key=key)
-    
-    @classmethod
-    def instance(cls, key: str) -> Self:
-        return cls.Database.instance(key=key)
+    def instance_from_context(cls, key: str) -> Self:
+        return cls.Database.instance_from_context(key=key)
     
     @classmethod
     async def instances_list(cls, *, lazy: bool = True, query: dict | list[dict] | None = None):
-        await cls.update_model_context(lazy=lazy, query=query)
-        return [cls(**i) for i in cls.context_data().values()]
+        await cls.update_dependencies_context(lazy=lazy)
+        return [cls(**i) for i in await cls.fetch_all(query=query)]
     
     @classmethod
     async def sorted_instances_list(cls, *, lazy: bool = False, query: dict | list[dict] | None = None):
-        await cls.update_dependencies_context(lazy=lazy)
         return sorted(await cls.instances_list(lazy=lazy, query=query))
+    
+    @classmethod
+    def dependency_query(cls, key: str):
+        return {cls.item_name(): {'key': key}}
     
     @classmethod
     @cache
@@ -235,15 +253,7 @@ class Model(bs.AbstractModel):
             elif isinstance(result, list):
                 raise exception.ExistException(f'Inconsistência no banco de dados de {self.classname()} com a EXIST_QUERY {self.EXIST_QUERY}')
         return None
-    
-    def instance_dependencies(self):
-        result = {}
-        data = self.asjson()
-        references = self.dependencies_field_names()
-        for k, v in data.items():
-            if k in references:
-                result[k] = v or ''
-        return result
+
     
     async def save(self):
         return await self.Database.save(self.asjson())
@@ -256,6 +266,12 @@ class Model(bs.AbstractModel):
         if not exist:
             return await self.save()
         return None
+    
+    @classmethod
+    async def load_instance(cls, key: str) -> Self:
+        instance = cls(**await cls.fetch_one(key))
+        await instance.update_instance_context()
+        return instance
 
 
 @dataclasses.dataclass

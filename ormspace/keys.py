@@ -24,16 +24,28 @@ class KeyBase(UserString):
     :param value: the value of the key or tablekey
     :type value: Optional[str]
     """
-    value: str | None
-    info: ValidationInfo
-    instance: ModelType = Field(None, init_var=False)
+    
+    def __init__(self, value: str | None = None, info: ValidationInfo = None) -> None:
+        self.value = value
+        self.info = info
+        self._instance = None
+        super().__init__(self.value)
     
     def set_instance(self, value: ModelType):
-        self.instance = value
+        self._instance = value
+        
+    @property
+    def instance(self):
+        return self._instance
     
     @property
     def field_name(self):
         return self.info.field_name
+    
+    @property
+    def field_context(self):
+        return self.info.context
+
         
     @classmethod
     def __get_pydantic_core_schema__(
@@ -92,6 +104,7 @@ class TableKey(KeyBase):
     @property
     def key(self):
         return self.groupdict.get('key', None)
+    
         
         
 class KeyList(UserList[Key]):

@@ -17,7 +17,7 @@ from pydantic_core import core_schema
 from typing_extensions import Self
 from deta.base import FetchResponse
 
-
+from ormspace import functions
 from ormspace.alias import *
 
 
@@ -28,7 +28,7 @@ class AbstractModel(BaseModel):
     :type key: str | None
     """
     # model config
-    model_config = ConfigDict(extra='allow', str_strip_whitespace=True, arbitrary_types_allowed=True)
+    model_config = ConfigDict(extra='allow', str_strip_whitespace=True, arbitrary_types_allowed=True, from_attributes=True)
 
     key: Optional[str] = None
     
@@ -97,15 +97,11 @@ class AbstractModel(BaseModel):
     
     @classmethod
     @abstractmethod
-    def context_data(cls) -> dict[str, dict]:...
+    def object_from_context(cls, key: str) -> JSON :...
     
     @classmethod
     @abstractmethod
-    def object(cls, key: str) -> JSON :...
-    
-    @classmethod
-    @abstractmethod
-    def instance(cls, key: str) -> Self:...
+    def instance_from_context(cls, key: str) -> Self:...
     
     @classmethod
     @abstractmethod
@@ -179,26 +175,34 @@ class AbstractModel(BaseModel):
 
 
 class AbstractRegex(UserString):
+    GROUP_PATTERN: ClassVar[Pattern] = None
+    NON_GROUP_PATTERN: ClassVar[Pattern] = None
+    SEPARATOR: ClassVar[str] = ''
+    
     def __init__(self, value: str) -> None:
-        self.value = value
-        for k, v in self.group_dict().items():
-            setattr(self, k, v)
+        self.value = value or ''
+        for k, v in self.groupdict().items():
+            setattr(self, f"_{k}", v)
         super().__init__(self.resolve)
 
     
     @property
-    @abstractmethod
     def pattern(self) -> Pattern:
-        ...
+        if pattern:= self.GROUP_PATTERN or self.NON_GROUP_PATTERN:
+            return pattern
+        raise ValueError('No group or non-group pattern')
     
     @property
-    @abstractmethod
     def resolve(self) -> str:
-        ...
+        if self.NON_GROUP_PATTERN:
+            return self.SEPARATOR.join(self.findall)
+        elif self.GROUP_PATTERN:
+            return functions.write_args(self.groupdict().values(), sep=' ')
+        return self.value
     
     @property
     def findall(self):
-        return self.pattern.findall(self.value)
+        return self.NON_GROUP_PATTERN.findall(self.value)
     
     @property
     def search(self):
@@ -212,9 +216,10 @@ class AbstractRegex(UserString):
     def fullmatch(self):
         return self.pattern.fullmatch(self.value)
     
-    def group_dict(self) -> dict:
-        if match:= self.fullmatch:
-            return match.groupdict()
+    def groupdict(self) -> dict:
+        if self.GROUP_PATTERN:
+            if match:= self.GROUP_PATTERN.fullmatch(self.value):
+                return match.groupdict()
         return {}
     
     @classmethod
@@ -231,6 +236,8 @@ class AbstractRegex(UserString):
     def validate(cls, obj: str | None) -> Self | None:
         if obj and isinstance(obj, str):
             return cls(obj)
+        elif isinstance(obj, cls):
+            return obj
         return None
 
 
