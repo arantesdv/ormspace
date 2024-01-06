@@ -2,15 +2,15 @@ from contextlib import asynccontextmanager
 
 from ormspace.alias import QUERIES, QUERY
 from ormspace.bases import ModelType
+from anyio import create_task_group
 
 
 @asynccontextmanager
-async def load_queries_context(model: type[ModelType], queries: QUERIES):
-    await model.update_dependencies_context(queries=queries)
+async def query_context(queries: dict[type[ModelType], QUERY]):
+    async with create_task_group() as tks:
+        for model in queries.keys():
+            tks.start_soon(model.update_model_context, False, queries.get(model, None))
     yield
     
-@asynccontextmanager
-async def load_query_context(model: type[ModelType], query: QUERY):
-    await model.update_model_context(query=query)
-    yield
+
     

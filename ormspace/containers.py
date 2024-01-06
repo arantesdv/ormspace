@@ -3,7 +3,16 @@ from __future__ import annotations
 from collections import UserList, UserDict
 from typing import Sequence
 
+from typing_extensions import Self
+
 from ormspace.bases import ModelType
+
+
+class QueryConstructor(UserDict):
+    
+    def contains(self, key: str, value: str) -> Self:
+        self.data.update({f'{key}?contains': value})
+        return self
 
 
 class ListOfUniques(UserList):
