@@ -7,11 +7,11 @@ from contextvars import copy_context, ContextVar
 from typing import Optional
 
 from anyio import create_task_group
-from deta import Deta
+from deta import AsyncBase, Deta
 from deta.base import FetchResponse
 
 from ormspace import exception, functions
-from ormspace.space_settings import space_settings, SpaceSettings
+from ormspace.settings import Settings
 from ormspace.bases import ModelType
 from ormspace.alias import *
 
@@ -20,22 +20,15 @@ context = ctx = copy_context()
 
 
 class Database:
-    def __init__(self, model: type[ModelType], settings: SpaceSettings = None):
+    def __init__(self, model: type[ModelType], project_key: str = None):
         try:
             self.model = model
-            self.settings = settings or space_settings
-            self.deta = Deta(self.deta_data_key)
+            self.project_key = project_key or Settings().data_key
+            self.deta = Deta(self.project_key)
             self.contextvar = ContextVar(f'{self.model.classname()}Var', default=dict())
         except BaseException as e:
             raise exception.DatabaseException(e)
-        
-    @property
-    def deta_data_key(self):
-        """
-        The project data key used for Deta Space.
-        :return: str
-        """
-        return self.settings.data_key
+
 
     # context
     @staticmethod
@@ -121,7 +114,7 @@ class Database:
         The project id of data key.
         :return: str
         """
-        return self.deta_data_key.split('_')[0]
+        return self.project_key.split('_')[0]
     
     def async_base(self, host: str | None = None) -> Deta.AsyncBase:
         """
@@ -162,7 +155,7 @@ class Database:
         :param key:
         :return: the object data or None
         """
-        base = self.async_base()
+        base: AsyncBase = self.async_base()
         try:
             return await base.get(key)
         finally:

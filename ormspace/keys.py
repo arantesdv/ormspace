@@ -69,7 +69,7 @@ class KeyBase(UserString):
 KeyType = TypeVar('KeyType', bound=KeyBase)
 
 class Key(KeyBase):
-    def __init__(self, value: str | None, info: ValidationInfo):
+    def __init__(self, value: str | None = None, info: ValidationInfo | None = None):
         self.value = value
         self.info = info
         super().__init__(self.key or '')
@@ -83,7 +83,7 @@ class Key(KeyBase):
 
 
 class TableKey(KeyBase):
-    def __init__(self, value: str | None, info: ValidationInfo):
+    def __init__(self, value: str | None = None, info: ValidationInfo | None = None):
         self.value = value or ""
         self.info = info
         self.groupdict: dict = {}
@@ -113,7 +113,7 @@ class KeyList(UserList[Key]):
     instances: list[ModelType] = Field(init_var=False, default_factory=list)
 
     
-    def __init__(self, value: list[str], info: ValidationInfo):
+    def __init__(self, value: list[str] | None = None, info: ValidationInfo|None = None):
         self.value = value or []
         self.info = info
         

@@ -177,7 +177,7 @@ class AbstractModel(BaseModel):
 class AbstractRegex(UserString):
     GROUP_PATTERN: ClassVar[Pattern] = None
     NON_GROUP_PATTERN: ClassVar[Pattern] = None
-    SEPARATOR: ClassVar[str] = ''
+    SEPARATOR: ClassVar[str] = ' '
     
     def __init__(self, value: str) -> None:
         self.value = value or ''
@@ -197,7 +197,7 @@ class AbstractRegex(UserString):
         if self.NON_GROUP_PATTERN:
             return self.SEPARATOR.join(self.findall)
         elif self.GROUP_PATTERN:
-            return functions.write_args(self.groupdict().values(), sep=' ')
+            return functions.write_args(self.groupdict().values(), sep=self.SEPARATOR)
         return self.value
     
     @property
@@ -265,7 +265,7 @@ class BaseEnum(Enum):
     def html_options(cls, value: str = None) -> str:
         with io.StringIO() as f:
             for member in cls:
-                f.write(member.option(any([value.upper() == member.name, value.lower() == member.value.lower()])))
+                f.write(member.option(any([value.upper() == member.name, (value.lower() == member.value.lower()) if value else False])))
             return f.getvalue()
 
 

@@ -8,11 +8,62 @@ from typing_extensions import Self
 from ormspace.bases import ModelType
 
 
-class QueryConstructor(UserDict):
+class QueryContains(UserDict):
     
-    def contains(self, key: str, value: str) -> Self:
+    def __init__(self, **kwargs):
+        self.initial_value = kwargs
+        super().__init__({})
+        for key, value in self.initial_value.items():
+            self.setup(key, value)
+    
+    def setup(self, key: str, value: str):
         self.data.update({f'{key}?contains': value})
-        return self
+
+
+class QueryNotContains(QueryContains):
+    def setup(self, key: str, value: str):
+        self.data.update({f'{key}?not_contains': value})
+        
+class QueryNotEqual(QueryContains):
+    
+    def setup(self, key: str, value: str | int | float | None):
+        self.data.update({f'{key}?ne': value})
+
+
+class QueryGreaterThan(QueryContains):
+    
+    def setup(self, key: str, value: int | float):
+        self.data.update({f'{key}?gt': value})
+
+
+class QueryLessThan(QueryContains):
+    
+    def setup(self, key: str, value: int | float):
+        self.data.update({f'{key}?lt': value})
+
+
+class QueryLessThanOrEqual(QueryContains):
+    
+    def setup(self, key: str, value: int | float):
+        self.data.update({f'{key}?lte': value})
+
+
+class QueryGreaterThanOrEqual(QueryContains):
+    
+    def setup(self, key: str, value: int | float):
+        self.data.update({f'{key}?gte': value})
+
+
+class QueryPrefix(QueryContains):
+    
+    def setup(self, key: str, value: str):
+        self.data.update({f'{key}?pfx': value})
+
+
+class QueryRange(QueryContains):
+    
+    def setup(self, key: str, value: list[int | float]):
+        self.data.update({f'{key}?r': value})
 
 
 class ListOfUniques(UserList):
@@ -76,3 +127,4 @@ class ModelDependencyTree(UserDict):
     @property
     def metadata(self):
         return self.data.get('metadata', {})
+    

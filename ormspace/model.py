@@ -19,6 +19,7 @@ from ormspace import containers as ct
 from ormspace import bases as bs
 from ormspace.alias import JSONDICT, QUERY
 from ormspace.database import Database
+from ormspace.settings import Settings
 
 
 class Model(bs.AbstractModel):
@@ -330,19 +331,38 @@ def models() -> list[type[bs.ModelType]]:
     return functions.filter_uniques(list(ModelMap.values()))
 
 
-def modelmap(cls: type[bs.ModelType]):
-    @wraps(cls)
-    def wrapper():
-        assert issubclass(cls, Model), 'A subclass of Model is required.'
-        # assert cls.EXIST_QUERY, 'cadastrar "EXIST_QUERY" na classe "{}"'.format(cls.__name__)
-        cls.Database = db.Database(cls)
-        cls.Key = Annotated[kb.Key, mt.MetaInfo(tables=[cls.classname()], item_name=cls.item_name(), model=cls)]
-        cls.KeyList = Annotated[kb.KeyList, mt.MetaInfo(model=cls, tables=[cls.classname()], item_name=f'{cls.item_name()}_list')]
-        # cls.Key = Annotated[kb.Key, PlainSerializer(kb.Key.asjson, return_type=str), mt.MetaInfo(tables=[cls.classname()], item_name=cls.item_name(), model=cls)]
-        # cls.KeyList = Annotated[kb.KeyList, PlainSerializer(kb.KeyList.asjson, return_type=list[str]), mt.MetaInfo(model=cls)]
-        ModelMap[cls.item_name()]: cls = cls
-        return cls
-    return wrapper()
+# def modelmap(cls: type[bs.ModelType]):
+#     @wraps(cls)
+#     def wrapper():
+#         assert issubclass(cls, Model), 'A subclass of Model is required.'
+#         # assert cls.EXIST_QUERY, 'cadastrar "EXIST_QUERY" na classe "{}"'.format(cls.__name__)
+#         cls.Database = db.Database(cls)
+#         cls.Key = Annotated[kb.Key, mt.MetaInfo(tables=[cls.classname()], item_name=cls.item_name(), model=cls)]
+#         cls.KeyList = Annotated[kb.KeyList, mt.MetaInfo(model=cls, tables=[cls.classname()], item_name=f'{cls.item_name()}_list')]
+#         # cls.Key = Annotated[kb.Key, PlainSerializer(kb.Key.asjson, return_type=str), mt.MetaInfo(tables=[cls.classname()], item_name=cls.item_name(), model=cls)]
+#         # cls.KeyList = Annotated[kb.KeyList, PlainSerializer(kb.KeyList.asjson, return_type=list[str]), mt.MetaInfo(model=cls)]
+#         ModelMap[cls.item_name()]: cls = cls
+#         return cls
+#     return wrapper()
+
+
+
+def modelmap(cls: type[bs.ModelType], *, project_key: str = None):
+    def decorator(endpoint):
+        @wraps(endpoint)
+        def wrapper():
+            assert issubclass(cls, Model), 'A subclass of Model is required.'
+            # assert cls.EXIST_QUERY, 'cadastrar "EXIST_QUERY" na classe "{}"'.format(cls.__name__)
+            cls.Database = db.Database(cls, project_key if project_key else Settings().data_key)
+            cls.Key = Annotated[kb.Key, mt.MetaInfo(tables=[cls.classname()], item_name=cls.item_name(), model=cls)]
+            cls.KeyList = Annotated[
+                kb.KeyList, mt.MetaInfo(model=cls, tables=[cls.classname()], item_name=f'{cls.item_name()}_list')]
+            # cls.Key = Annotated[kb.Key, PlainSerializer(kb.Key.asjson, return_type=str), mt.MetaInfo(tables=[cls.classname()], item_name=cls.item_name(), model=cls)]
+            # cls.KeyList = Annotated[kb.KeyList, PlainSerializer(kb.KeyList.asjson, return_type=list[str]), mt.MetaInfo(model=cls)]
+            ModelMap[cls.item_name()]: cls = cls
+            return cls
+        return wrapper()
+    return decorator
 
 
 def getmodel(value: str) -> type[bs.ModelType]:

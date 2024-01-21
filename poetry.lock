@@ -177,7 +177,7 @@ typing-extensions = ">=4.6.0,<4.7.0 || >4.7.0"
 [[package]]
 name = "pydantic-settings"
 version = "2.0.3"
-description = "SpaceSettings management using Pydantic"
+description = "Settings management using Pydantic"
 category = "main"
 optional = false
 python-versions = ">=3.7"
