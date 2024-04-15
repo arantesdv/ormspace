@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import datetime
-import re
 from decimal import Decimal
 from typing import Annotated, Optional
 
@@ -10,21 +11,8 @@ from ormspace import functions
 from ormspace.metainfo import MetaInfo
 
 
-def bytes_to_str(value: bytes) -> str:
-    return value.decode("utf-8")
-
-
-def string_to_list(value: str) -> list:
-    if value:
-        if isinstance(value, str):
-            return [i.strip() for i in re.split(r"[\n;]", value) if i]
-        elif isinstance(value, list):
-            return value
-    return []
-    
-
-BytesField = Annotated[bytes, PlainSerializer(bytes_to_str, return_type=str)]
-PasswordField = Annotated[bytes, PlainSerializer(bytes_to_str, return_type=str)]
+BytesField = Annotated[bytes, PlainSerializer(functions.bytes_to_str, return_type=str)]
+PasswordField = Annotated[bytes, PlainSerializer(functions.bytes_to_str, return_type=str)]
 TitleField = Annotated[str, AfterValidator(functions.title_caps)]
 LowerStringField = Annotated[str, AfterValidator(lambda x: x.lower() if x else '')]
 BirthDateField = Annotated[datetime.date, Ge((lambda : functions.today() - datetime.timedelta(days=365*125))()), Le(functions.today()), MetaInfo(form_field='date')]
@@ -38,4 +26,8 @@ IntegerField = Annotated[int, BeforeValidator(functions.parse_number), MetaInfo(
 FloatField = Annotated[float, BeforeValidator(functions.parse_number), MetaInfo(form_field='number', config='step="0.01"')]
 DecimalField = Annotated[Decimal, BeforeValidator(functions.parse_number), MetaInfo(form_field='number', config='step="0.01"')]
 PositiveFloatField = Annotated[float, Ge(0), MetaInfo(form_field='number', config='step="0.01"')]
-ListOfStrings = Annotated[list[str], BeforeValidator(string_to_list), Field(default_factory=list)]
+ListOfStrings = Annotated[list[str], BeforeValidator(functions.string_to_list), Field(default_factory=list)]
+OptionalFloat = Annotated[Optional[float], BeforeValidator(functions.none_if_empty_string), Field(None)]
+OptionalInteger = Annotated[Optional[int], BeforeValidator(functions.none_if_empty_string), Field(None)]
+OptionalDate = Annotated[Optional[datetime.date], BeforeValidator(functions.none_if_empty_string), Field(None)]
+OptionalDecimal = Annotated[Optional[Decimal], BeforeValidator(functions.none_if_empty_string), Field(None)]

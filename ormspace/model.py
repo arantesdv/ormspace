@@ -29,8 +29,8 @@ class Model(bs.AbstractModel):
     SINGULAR: ClassVar[str] = None
     PLURAL: ClassVar[str] = None
     TABLE_NAME: ClassVar[str] = None
-    Database: ClassVar[Database] = None
     MODEL_GROUPS: ClassVar[list[str]] = None
+    Database: ClassVar[Database] = None
     Key: ClassVar[Annotated] = None
     KeyList: ClassVar[Annotated] = None
     
@@ -42,6 +42,16 @@ class Model(bs.AbstractModel):
     @classmethod
     def instances_from_context(cls):
         return [cls(**i) for i in cls.context_data().values()]
+    
+    @classmethod
+    def fetch_query(cls) -> dict:
+        return cls.FETCH_QUERY or {}
+    
+    @classmethod
+    def make_query(cls, data: dict) -> dict:
+        fetch = cls.fetch_query()
+        fetch.update(data)
+        return fetch
     
     
     def model_post_init(self, __context: Any) -> None:
@@ -140,9 +150,9 @@ class Model(bs.AbstractModel):
         return cls.Database.instance_from_context(key=key)
     
     @classmethod
-    async def instances_list(cls, *, lazy: bool = True, query: dict | list[dict] | None = None):
+    async def instances_list(cls, *, lazy: bool = False, query: dict | list[dict] | None = None):
         await cls.update_dependencies_context(lazy=lazy)
-        return [cls(**i) for i in await cls.fetch_all(query=query)]
+        return [cls(**i) for i in await cls.fetch_all(query=cls.make_query(query or {}))]
     
     @classmethod
     async def sorted_instances_list(cls, *, lazy: bool = False, query: dict | list[dict] | None = None):
@@ -160,6 +170,10 @@ class Model(bs.AbstractModel):
             if meta:= mt.MetaInfo.compile(mt.MetaInfo.field_info(cls, item)):
                 result.extend([getmodel(i) for i in meta.tables])
         return functions.filter_uniques(result)
+    
+    @classmethod
+    def field(cls, name: str):
+        return cls.model_fields.get(name, None)
 
     @classmethod
     @cache
@@ -204,7 +218,6 @@ class Model(bs.AbstractModel):
         meta = mt.MetaInfo.compile(mt.MetaInfo.field_info(cls, name))
         return meta.item_name or name.replace('_key', '')
 
-    
     @classmethod
     async def fetch_all(cls, query: dict | list[dict] | None = None):
         return await cls.Database.fetch_all(query=query)
@@ -307,7 +320,29 @@ class ModelGroupMap(UserDict[str, ModelGroup]):
     def __init__(self, data: defaultdict):
         super().__init__({k: ModelGroup(k, ct.ListOfUniques(v)) for k, v in data.items()})
 
-ModelMap: ChainMap[str, type[bs.ModelType]] = ChainMap()
+
+
+class ModelMapConstructor(ChainMap[str, type[bs.ModelType]]):
+        
+    @property
+    def models(self) -> tuple[type[bs.ModelType]]:
+        return tuple([*self.values()])
+    
+    @property
+    def key_name_map(self) -> dict[str, type[bs.ModelType]]:
+        return {f'{i.item_name()}_key': i for i in self.models}
+    
+    @property
+    def model_name_map(self) -> dict[str, type[bs.ModelType]]:
+        return {i.classname(): i for i in self.models}
+    
+    @property
+    def table_name_map(self) -> dict[str, type[bs.ModelType]]:
+        return {i.table(): i for i in self.models}
+
+
+ModelMap: ModelMapConstructor = ModelMapConstructor()
+
 
 @overload
 def model_groups() -> ModelGroupMap:...
@@ -331,25 +366,9 @@ def models() -> list[type[bs.ModelType]]:
     return functions.filter_uniques(list(ModelMap.values()))
 
 
-# def modelmap(cls: type[bs.ModelType]):
-#     @wraps(cls)
-#     def wrapper():
-#         assert issubclass(cls, Model), 'A subclass of Model is required.'
-#         # assert cls.EXIST_QUERY, 'cadastrar "EXIST_QUERY" na classe "{}"'.format(cls.__name__)
-#         cls.Database = db.Database(cls)
-#         cls.Key = Annotated[kb.Key, mt.MetaInfo(tables=[cls.classname()], item_name=cls.item_name(), model=cls)]
-#         cls.KeyList = Annotated[kb.KeyList, mt.MetaInfo(model=cls, tables=[cls.classname()], item_name=f'{cls.item_name()}_list')]
-#         # cls.Key = Annotated[kb.Key, PlainSerializer(kb.Key.asjson, return_type=str), mt.MetaInfo(tables=[cls.classname()], item_name=cls.item_name(), model=cls)]
-#         # cls.KeyList = Annotated[kb.KeyList, PlainSerializer(kb.KeyList.asjson, return_type=list[str]), mt.MetaInfo(model=cls)]
-#         ModelMap[cls.item_name()]: cls = cls
-#         return cls
-#     return wrapper()
-
-
-
 def modelmap(cls: type[bs.ModelType], *, project_key: str = None):
-    def decorator(endpoint):
-        @wraps(endpoint)
+    def decorator():
+        @wraps(cls)
         def wrapper():
             assert issubclass(cls, Model), 'A subclass of Model is required.'
             # assert cls.EXIST_QUERY, 'cadastrar "EXIST_QUERY" na classe "{}"'.format(cls.__name__)
@@ -362,7 +381,7 @@ def modelmap(cls: type[bs.ModelType], *, project_key: str = None):
             ModelMap[cls.item_name()]: cls = cls
             return cls
         return wrapper()
-    return decorator
+    return decorator()
 
 
 def getmodel(value: str) -> type[bs.ModelType]:

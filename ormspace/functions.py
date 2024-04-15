@@ -25,6 +25,7 @@ import calendar
 import secrets
 from collections.abc import Sequence
 from dataclasses import fields
+from decimal import Decimal
 from functools import partial
 from typing import Any, Callable, get_args, get_origin, Iterable, Literal, Optional, overload, TypeVar
 
@@ -201,7 +202,7 @@ def filter_uniques(data: Sequence) -> list:
     return result
 
 def filter_not_none(data: Sequence) -> list:
-    return [i for i in data if i not in [None, '', list(), dict(), set()]]
+    return [i for i in data if not is_none_or_empty(i)]
 
 def getter(obj: Any, name: str):
     """Get value from dict or getattr lookup. Suports dotted name"""
@@ -262,14 +263,6 @@ def string_to_number(value: str) -> int | float:
         return float(value).__round__(2)
     return int(float(value))
 
-def string_to_list(v: list[str] | str):
-    if v in ['', None]:
-        return []
-    elif isinstance(v, str):
-        return filter_not_none(re.split(r'[\n;]', v))
-    elif isinstance(v, list):
-        return filter_not_none(v)
-    return v
 
 def list_to_string(value, intersection: str = ', '):
     if isinstance(value, list):
@@ -295,3 +288,43 @@ def title_caps(string: str) -> str:
                 cleaned.append(item.title())
         file.write(join(cleaned, sep=' '))
         return file.getvalue()
+
+def write_query(data: dict):
+    return join(data, sep="&", junction="=", boundary="", underscored=True)
+
+def is_none_or_empty(value: Any) -> bool:
+    return value in [None, '', list(), dict(), set()]
+
+def is_string(value: Any) -> bool:
+    return isinstance(value, str)
+
+def is_number(value: Any) -> bool:
+    return isinstance(value, (float, int, Decimal))
+
+def is_list(value: Any) -> bool:
+    return isinstance(value, list)
+
+def is_dict(value: Any) -> bool:
+    return isinstance(value, dict)
+
+def is_tuple(value: Any) -> bool:
+    return isinstance(value, tuple)
+
+
+def bytes_to_str(value: bytes) -> str:
+    return value.decode("utf-8")
+
+
+def string_to_list(value: str) -> list:
+    if value:
+        if isinstance(value, str):
+            return [i.strip() for i in re.split(r"[\n;+]", value) if i]
+        elif isinstance(value, list):
+            return filter_not_none(value)
+    return []
+
+
+def none_if_empty_string(string: str | None) -> str | None:
+    if string == '':
+        return None
+    return string
