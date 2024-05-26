@@ -44,6 +44,9 @@ async def run_tasks(coroutines: list[Callable]):
 def bool_to_portuguese(v: bool) -> str:
     return 'sim' if v else 'não'
 
+def bool_to_english(v: bool) -> str:
+    return 'yes' if v else 'no'
+
 def meta_repr(self):
     fds = (i for i in fields(self) if getattr(self, i.name))
     return write_kwargs({i.name: getattr(self, i.name) for i in list(fds)})
@@ -59,10 +62,21 @@ def compose(items: list[str]) -> str:
             return join(data, sep=', ') + ' e ' + reminescent
     return ''
 
+def concatenate(items: list[str]) -> str:
+    if items:
+        if len(items) == 1:
+            return items[0]
+        elif len(items) == 2:
+            return join(items, sep=' e ')
+        else:
+            data, reminescent = items[:-1], items[-1]
+            return join(data, sep=', ') + ' e ' + reminescent
+    return ''
+
 def years(end: datetime.date, start: datetime.date) -> float:
     days = (end - start).days
     subtract = calendar.leapdays(start.year, end.year)
-    return ((days - subtract)/365).__round__(1)
+    return ((days - subtract)/365).__round__(2)
 
 def date_from_age(age: float, bdate: datetime.date) -> datetime.date:
     around = bdate + datetime.timedelta(days=age * 365)

@@ -9,7 +9,7 @@ from typing_extensions import TypeAlias
 
 TABLE: TypeAlias = str
 KEY: TypeAlias = Optional[str]
-DATA: TypeAlias = Union[dict, list, str, int, float, bool]
+DATA: TypeAlias = Union[dict, list, str, int, float, bool, None]
 JSONPRIMITIVE: TypeAlias = Union[str, int, float, bool, None]
 JSONLIST: TypeAlias = list[JSONPRIMITIVE]
 JSONDICT: TypeAlias = Union[str, Union[JSONPRIMITIVE, dict[str, JSONPRIMITIVE], JSONLIST]]

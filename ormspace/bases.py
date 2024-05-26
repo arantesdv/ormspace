@@ -185,7 +185,6 @@ class AbstractRegex(UserString):
             setattr(self, f"_{k}", v)
         super().__init__(self.resolve)
 
-    
     @property
     def pattern(self) -> Pattern:
         if pattern:= self.GROUP_PATTERN or self.NON_GROUP_PATTERN:
@@ -232,6 +231,7 @@ class AbstractRegex(UserString):
             serialization=core_schema.plain_serializer_function_ser_schema(lambda obj: str(obj),
                                                                            return_schema=core_schema.str_schema()),
         )
+    
     @classmethod
     def validate(cls, obj: str | None) -> Self | None:
         if obj and isinstance(obj, str):

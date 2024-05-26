@@ -35,6 +35,16 @@ class Model(bs.AbstractModel):
     KeyList: ClassVar[Annotated] = None
     
     
+    async def update_database_data(self, **updates: dict[str, Any]) -> Optional[Self]:
+        try:
+            await self.Database.update(updates=updates, key=self.key)
+            return await self.fetch_one(self.key)
+        except Exception as e:
+            return None
+            
+    
+    
+    
     @classmethod
     def context_data(cls) -> dict:
         return cls.Database.context_data

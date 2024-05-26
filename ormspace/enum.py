@@ -1,6 +1,3 @@
-import io
-from collections import namedtuple, UserString
-from enum import Enum
 from typing import Any, Type, TypeVar
 
 from pydantic import GetCoreSchemaHandler

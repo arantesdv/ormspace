@@ -30,4 +30,5 @@ ListOfStrings = Annotated[list[str], BeforeValidator(functions.string_to_list), 
 OptionalFloat = Annotated[Optional[float], BeforeValidator(functions.none_if_empty_string), Field(None)]
 OptionalInteger = Annotated[Optional[int], BeforeValidator(functions.none_if_empty_string), Field(None)]
 OptionalDate = Annotated[Optional[datetime.date], BeforeValidator(functions.none_if_empty_string), Field(None)]
+OptionalDateTime = Annotated[Optional[datetime.datetime], BeforeValidator(functions.none_if_empty_string), Field(None)]
 OptionalDecimal = Annotated[Optional[Decimal], BeforeValidator(functions.none_if_empty_string), Field(None)]
